@@ -1,0 +1,33 @@
+[package]
+name = "lazarus"
+version = "0.0.0"
+edition = "2021"
+authors = ["lattice-complete"]
+description = "A Framework of Lattice-based Zero-knowledge Arguments in Rust"
+repository = "https://github.com/lattice-complete/Lazarus"
+license = "MIT OR Apache-2.0"
+keywords = ["cryptography", "lattice", "zero-knowledge", "zkSNARK", "NTT", "AVX-512"]
+categories = ["cryptography"]
+
+[dependencies]
+# Core dependencies
+rand = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+
+# Numeric and mathematical operations
+num-bigint = "0.4"
+num-traits = "0.2"
+num-integer = "0.1"
+
+# Serialization
+bincode = "1.3"
+
+[dev-dependencies]
+criterion = "0.5"
+proptest = "1.3"
+
+[[bench]]
+name = "polynomial_ops"
+harness = false
+
