@@ -13,6 +13,13 @@ Lazarus is a framework for implementing lattice-based zero-knowledge arguments i
 - Optimized polynomial operations
 - Serialization/deserialization support
 
+## Roadmap
+- [ ] Implementing polynomial commitment schemes
+- [ ] Implementing zero-knowledge proofs for linear relations
+- [ ] Implementing sigma protocols for lattice statements
+- [ ] Optimized polynomial operations
+- [ ] Serialization/deserialization support
+
 ## Getting Started
 
 Add Lazarus to your Cargo.toml:
@@ -47,6 +54,7 @@ Add Lazarus to your Cargo.toml:
 - [labrador](https://github.com/lattice-dogs/labrador) by 
 lattice-dogs
 - [arkworks](https://arkworks.rs/) 
+- [larkworks](https://github.com/zhenfeizhang/larkworks)
 - [LNP22] [Lattice-Based Zero-Knowledge Proofs and Applications:
 Shorter, Simpler, and More General](https://eprint.iacr.org/2022/284.pdf)
 - [BS23] [LaBRADOR: Compact Proofs for R1CS from Module-SIS](https://eprint.iacr.org/2022/1341.pdf)
