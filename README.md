@@ -1,6 +1,8 @@
 <h1 align="center">⚡Lazarus⚡</h1>
 <p align="center">A Framework of Lattice-based Zero-knowledge Arguments in Rust</p>
 
+<img class="center" src="./assets/Lazarus.jpeg" alt="Lazarus" width="150"/>
+
 > Warning: Lazarus is under active development and the API is subject to change. Do not use in production (**at all, yet**).
 
 Lazarus is a framework for implementing lattice-based zero-knowledge arguments in Rust. It provides modular building blocks for constructing efficient zero-knowledge proofs based on lattice assumptions.
