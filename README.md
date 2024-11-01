@@ -1,7 +1,7 @@
 <h1 align="center">⚡Lazarus⚡</h1>
 <p align="center">A Framework of Lattice-based Zero-knowledge Arguments in Rust</p>
 
-![](./assets/Lazarus.jpeg)
+![](./assets/lazarus.jpeg)
 
 > Warning: Lazarus is under active development and the API is subject to change. Do not use in production (**at all, yet**).
 
