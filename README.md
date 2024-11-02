@@ -1,7 +1,9 @@
 <h1 align="center">⚡Lazarus⚡</h1>
 <p align="center">A Framework of Lattice-based Zero-knowledge Arguments in Rust</p>
 
-<img src="./assets/lazarus.jpeg" alt="lazarus" align="center" width="200">
+<p align="center">
+  <img src="./assets/lazarus.jpeg" alt="lazarus" width="200">
+</p>
 
 > Warning: Lazarus is under active development and the API is subject to change. Do not use in production (**at all, yet**).
 
@@ -14,6 +16,20 @@ Lazarus is a framework for implementing lattice-based zero-knowledge arguments i
 - Fiat-Shamir transformations
 - Optimized polynomial operations
 - Serialization/deserialization support
+
+## Framework Comparison
+
+| Feature                       | noble-post-quantum | labrador | arkworks | larkworks | Lazarus |
+|------------------------------|-------------------|-----------|-----------|-----------|----------|
+| Language                     | JavaScript        | C      | Rust      | Rust      | Rust     |
+| Post-quantum Security      | ✅                | ✅        | ❌        | ✅        | ✅       |
+| Argument Systems       | ❌                | ✅        |   ✅     | ❌       | ✅       |
+| Polynomial Commitments      | ❌                | ✅        | ✅        | ❌        | ✅       |
+| Modular Building Blocks     | ✅                | ❌        | ✅        | ✅       | ✅       |
+| Active Development        | ✅                | ✅        | ❌        | ❌        | ✅      |
+| Documentation             | ❌                | ❌       | ❌        | ❌        | 🚧       |
+
+
 
 ## Roadmap
 - [ ] Implementing polynomial commitment schemes
