@@ -71,7 +71,7 @@ Add Lazarus to your Cargo.toml:
 
 
 ## Acknowledgements
-- [noble-post-quantum](https://github.com/paulmillrnoble-post-quantum) by paulmillr
+- [noble-post-quantum](https://github.com/paulmillr/noble-post-quantum) by paulmillr
 - [labrador](https://github.com/lattice-dogs/labrador) by 
 lattice-dogs
 - [arkworks](https://arkworks.rs/) 
@@ -93,3 +93,14 @@ If you use arkworks libraries in your research projects, please cite them using 
   year = {2024},
 }
 ```
+
+## Contributors
+
+<div align="center">
+  <h4 align="center">
+    
+  </h4>
+  <a href="https://github.com/lattice-complete/Lazarus/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=lattice-complete/Lazarus" />
+  </a>
+</div>
