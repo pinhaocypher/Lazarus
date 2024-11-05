@@ -2,3 +2,8 @@
 name = "labrador"
 version = "0.1.0"
 edition = "2018"
+
+[[example]]
+name = "main"
+required_features = ["test"]
+path = "src/example/main.rs"
