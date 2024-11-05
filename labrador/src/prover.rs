@@ -34,14 +34,13 @@ pub fn prove() {
     // 2.1 split t to t_i for all i
     // 2.1.1 get basis b1, refer to paper page 16, labrador c code line 142
     // refer to note: line => xxx
-    
+
     // 2.2 split g = <s_i, s_j> for all i, j
     // 2.2.1 get basis b2 same as 2.1.1
 
     // 2.3 calculate u1
     // 2.3.1 B & C is randomly chosen
     // 2.3.2 calculate u1 = sum(B_ik * t_i^(k)) + sum(C_ijk * g_ij^(k))
-
 
     // ================================================
 
@@ -59,14 +58,14 @@ pub fn prove() {
     //      (Both using Guassian Distribution)
     // 4.3 caculate b^{''(k)}
     // 4.3.1 calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
-    // 4.3.2 calculate phi_i^{''(k)} = 
-    //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L 
+    // 4.3.2 calculate phi_i^{''(k)} =
+    //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
     //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
-    // 4.3.3 calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>) 
+    // 4.3.3 calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>)
 
     // Send b^{''(k)} to verifier
     // Verifier check: b_0^{''(k)} ?= <⟨omega^(k),p⟩> + sum(psi_l^(k) * b_0^{'(l)}) for all l = 1..L
-    
+
     // ================================================
 
     // 5. GOAL: Calculate u2 (2nd outer commitment)
@@ -74,7 +73,7 @@ pub fn prove() {
     // 5.2 phi_i = sum(alpha_k * phi_i) + beta_k * phi_i^{''(k)}
     // 5.3 h_ij = 1/2 * (<phi_i, s_j> + <phi_j, s_i>)
     // 5.4 u2 = sum D_ij * h_ij^(k) for all k = 1..(t1-1)
-    
+
     // Send u2 to verifier
 
     // ================================================

@@ -1,6 +1,5 @@
 // src/verifier.rs
 
-
 // What does the verifier already know? (Statement)
 // 1. public paraments: [a_ij^(k), a_ij^(l), phi^(k), phi^(l), b^(k), b0(l)']
 // 2. generate from V: [PI_i, psi^(k), omega^(k), vec<alpha>, vec<beta>, c_i]
