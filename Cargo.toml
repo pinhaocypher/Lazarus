@@ -9,6 +9,14 @@ license = "MIT OR Apache-2.0"
 keywords = ["cryptography", "lattice", "zero-knowledge", "zkSNARK", "NTT", "AVX-512"]
 categories = ["cryptography"]
 
+[workspace]
+members = [
+    "algebra",
+    "arithmetization",
+    "pcs",
+    "proving system/labrador",
+]
+
 [dependencies]
 # Core dependencies
 rand = "0.8"
