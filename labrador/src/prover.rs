@@ -144,15 +144,23 @@ mod tests {
         println!("beta^2: {}", beta.pow(2));
         // Check the condition
         assert!(sum_squared_norms <= beta.pow(2), "The condition is not satisfied: sum of squared norms exceeds beta^2");
-
         let k: usize = 3; // Change k to usize
         // calculate b^(k)
-        let mut b_values = Vec::new();
+        let mut b_values_k = Vec::new();
         for i in 0..k {
             let b_i = calculate_b_k(&s, r);
-            b_values.push(b_i);
+            b_values_k.push(b_i);
             println!("b^({}) = {}", i, b_i);
         }
-        // do sanity check
+
+        let l: usize = 3; // Define L as usize
+        // calculate b^(l)
+        let mut b_values_l = Vec::new();
+        for i in 0..l {
+            let b_i = calculate_b_k(&s, r);
+            b_values_l.push(b_i);
+            println!("b^({}) = {}", i, b_i);
+        }
+
     }
 }
