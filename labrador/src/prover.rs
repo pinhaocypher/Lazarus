@@ -107,7 +107,7 @@ fn calculate_b_k(s: &Vec<Vec<RingElement>>, r: usize) -> usize {
     for i in 0..r {
         for j in 0..r {
             let inner_product = s[i].iter().map(|elem| elem.value).zip(s[j].iter().map(|elem| elem.value)).map(|(x, y)| {
-                println!("x: {}, y: {}", x, y);
+                // println!("x: {}, y: {}", x, y);
                 x * y
             }).sum::<usize>();
             b_k += a[i][j] * inner_product;
@@ -117,6 +117,31 @@ fn calculate_b_k(s: &Vec<Vec<RingElement>>, r: usize) -> usize {
     }
 
     b_k
+}
+
+#[derive(Debug)]
+struct A {
+    values: Vec<Vec<usize>>, // A matrix of random usize values
+}
+
+impl A {
+    fn new(size: usize) -> Self {
+        let mut rng = rand::thread_rng();
+        let values = (0..size)
+            .map(|_| (0..size).map(|_| rng.gen_range(1..10)).collect()) // Random usize values between 1 and 10
+            .collect();
+        A { values }
+    }
+}
+
+// calculate A matrix times s_i
+fn calculate_a_times_s_i(a: &A, s_i: Vec<usize>) -> Vec<usize> {
+    a.values.iter().map(|row| {
+        row.iter().zip(s_i.iter()).enumerate().map(|(index, (a, b))| {
+            println!("Row {}: a: {}, b: {}", index, a, b);
+            a * b
+        }).sum::<usize>()
+    }).collect() // Collect results into a Vec<usize>
 }
 
 // create test case for setup
@@ -162,5 +187,14 @@ mod tests {
             println!("b^({}) = {}", i, b_i);
         }
 
+        let size = 3; // Example size
+        let a = A::new(size);
+        println!("A: {:?}", a);
+        let mut all_t_i = Vec::new();
+        for s_i in &s {
+            let t_i = calculate_a_times_s_i(&a, s_i.iter().map(|elem| elem.value).collect()); // Convert RingElement to usize
+            all_t_i.push(t_i);
+        }
+        println!("Calculated all t_i: {:?}", all_t_i);
     }
 }
