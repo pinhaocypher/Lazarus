@@ -85,14 +85,27 @@ pub fn prove() {
     // Send z, t_i, g_ij, h_ij to verifier
 }
 
-// Assuming you have a RingElement type defined
+// Assuming you have a RingPolynomial type defined
 #[derive(Debug)]
-struct RingElement {
-    value: usize, // Example field, adjust as necessary
+struct RingPolynomial {
+    coefficients: Vec<usize>, // Example field, adjust as necessary
+}
+
+impl RingPolynomial {
+    // Add this method to enable multiplication by RingPolynomial
+    fn multiply_by_ringpolynomial(&self, other: &RingPolynomial) -> RingPolynomial {
+        let mut result_coefficients = vec![0; self.coefficients.len() + other.coefficients.len() - 1];
+        for (i, &coeff1) in self.coefficients.iter().enumerate() {
+            for (j, &coeff2) in other.coefficients.iter().enumerate() {
+                result_coefficients[i + j] += coeff1 * coeff2;
+            }
+        }
+        RingPolynomial { coefficients: result_coefficients }
+    }
 }
 
 // Function to calculate b^(k)
-fn calculate_b_k(s: &Vec<Vec<RingElement>>, r: usize) -> usize {
+fn calculate_b_k(s: &Vec<Vec<RingPolynomial>>, r: usize) -> usize {
     let mut rng = rand::thread_rng();
 
     // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
@@ -106,13 +119,13 @@ fn calculate_b_k(s: &Vec<Vec<RingElement>>, r: usize) -> usize {
     // Calculate b^(k)
     for i in 0..r {
         for j in 0..r {
-            let inner_product = s[i].iter().map(|elem| elem.value).zip(s[j].iter().map(|elem| elem.value)).map(|(x, y)| {
+            let inner_product = s[i].iter().map(|elem| elem.coefficients[0]).zip(s[j].iter().map(|elem| elem.coefficients[0])).map(|(x, y)| {
                 // println!("x: {}, y: {}", x, y);
                 x * y
             }).sum::<usize>();
             b_k += a[i][j] * inner_product;
         }
-        let inner_product_phi = s[i].iter().map(|elem| elem.value).zip(phi.iter()).map(|(x, y)| x * y).sum::<usize>();
+        let inner_product_phi = s[i].iter().map(|elem| elem.coefficients[0]).zip(phi.iter()).map(|(x, y)| x * y).sum::<usize>();
         b_k += inner_product_phi;
     }
 
@@ -121,27 +134,24 @@ fn calculate_b_k(s: &Vec<Vec<RingElement>>, r: usize) -> usize {
 
 #[derive(Debug)]
 struct A {
-    values: Vec<Vec<usize>>, // A matrix of random usize values
+    values: Vec<Vec<RingPolynomial>>, // A matrix of random RingPolynomial values
 }
 
 impl A {
     fn new(size: usize) -> Self {
         let mut rng = rand::thread_rng();
         let values = (0..size)
-            .map(|_| (0..size).map(|_| rng.gen_range(1..10)).collect()) // Random usize values between 1 and 10
+            .map(|_| (0..size).map(|_| RingPolynomial { coefficients: (0..3).map(|_| rng.gen_range(1..10)).collect() }).collect())
             .collect();
         A { values }
     }
 }
 
 // calculate A matrix times s_i
-fn calculate_a_times_s_i(a: &A, s_i: Vec<usize>) -> Vec<usize> {
+fn calculate_a_times_s_i(a: &A, s_i: &Vec<RingPolynomial>) -> Vec<RingPolynomial> {
     a.values.iter().map(|row| {
-        row.iter().zip(s_i.iter()).enumerate().map(|(index, (a, b))| {
-            println!("Row {}: a: {}, b: {}", index, a, b);
-            a * b
-        }).sum::<usize>()
-    }).collect() // Collect results into a Vec<usize>
+        row.iter().zip(s_i.iter()).map(|(a, b)| a.multiply_by_ringpolynomial(b)).collect::<Vec<RingPolynomial>>()
+    }).collect::<Vec<Vec<RingPolynomial>>>().into_iter().flatten().collect::<Vec<RingPolynomial>>()
 }
 
 // create test case for setup
@@ -151,17 +161,18 @@ mod tests {
 
     #[test]
     fn test_setup() {
-        let r: usize = 3; // Number of witness elements
+        let s_amount: usize = 3; // r: Number of witness elements
+        let s_i_length: usize = 5; // n
         let beta: usize = 50; // Example value for beta
-        let s: Vec<Vec<RingElement>> = (1..=r).map(|i| {
-            (1..=3).map(|j| RingElement { value: i * 3 + j }).collect()
+        let s: Vec<Vec<RingPolynomial>> = (1..=s_amount).map(|i| {
+            (1..=s_i_length).map(|j| RingPolynomial { coefficients: vec![i * 3 + j, i * 3 + j + 1, i * 3 + j + 2] }).collect()
         }).collect();
         println!("s: {:?}", s);
         // Calculate the sum of squared norms
         let mut sum_squared_norms = 0;
         for vector in &s {
             let norm_squared: usize = vector.iter()
-                .map(|elem| elem.value.pow(2)) // Calculate the square of each element
+                .map(|elem| elem.coefficients[0].pow(2)) // Calculate the square of each element
                 .sum();
             sum_squared_norms += norm_squared; // Accumulate the squared norms
         }
@@ -173,7 +184,7 @@ mod tests {
         // calculate b^(k)
         let mut b_values_k = Vec::new();
         for i in 0..k {
-            let b_i = calculate_b_k(&s, r);
+            let b_i = calculate_b_k(&s, s_amount);
             b_values_k.push(b_i);
             println!("b^({}) = {}", i, b_i);
         }
@@ -182,7 +193,7 @@ mod tests {
         // calculate b^(l)
         let mut b_values_l = Vec::new();
         for i in 0..l {
-            let b_i = calculate_b_k(&s, r);
+            let b_i = calculate_b_k(&s, s_amount);
             b_values_l.push(b_i);
             println!("b^({}) = {}", i, b_i);
         }
@@ -192,7 +203,7 @@ mod tests {
         println!("A: {:?}", a);
         let mut all_t_i = Vec::new();
         for s_i in &s {
-            let t_i = calculate_a_times_s_i(&a, s_i.iter().map(|elem| elem.value).collect()); // Convert RingElement to usize
+            let t_i = calculate_a_times_s_i(&a, &s_i);
             all_t_i.push(t_i);
         }
         println!("Calculated all t_i: {:?}", all_t_i);
