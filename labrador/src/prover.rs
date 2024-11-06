@@ -1,4 +1,4 @@
-// src/prover.rs
+use rand::Rng;
 
 pub fn setup() {
     // 0. setup
@@ -88,7 +88,35 @@ pub fn prove() {
 // Assuming you have a RingElement type defined
 #[derive(Debug)]
 struct RingElement {
-    value: i32, // Example field, adjust as necessary
+    value: usize, // Example field, adjust as necessary
+}
+
+// Function to calculate b^(k)
+fn calculate_b_k(s: &Vec<Vec<RingElement>>, r: usize) -> usize {
+    let mut rng = rand::thread_rng();
+
+    // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
+    let a: Vec<Vec<usize>> = (0..r).map(|_| (0..r).map(|_| rng.gen_range(1..5)).collect()).collect();
+    let phi: Vec<usize> = (0..r).map(|_| rng.gen_range(1..5)).collect();
+    println!("a: {:?}", a);
+    println!("phi: {:?}", phi);
+
+    let mut b_k = 0;
+
+    // Calculate b^(k)
+    for i in 0..r {
+        for j in 0..r {
+            let inner_product = s[i].iter().map(|elem| elem.value).zip(s[j].iter().map(|elem| elem.value)).map(|(x, y)| {
+                println!("x: {}, y: {}", x, y);
+                x * y
+            }).sum::<usize>();
+            b_k += a[i][j] * inner_product;
+        }
+        let inner_product_phi = s[i].iter().map(|elem| elem.value).zip(phi.iter()).map(|(x, y)| x * y).sum::<usize>();
+        b_k += inner_product_phi;
+    }
+
+    b_k
 }
 
 // create test case for setup
@@ -98,16 +126,16 @@ mod tests {
 
     #[test]
     fn test_setup() {
-        let r = 5; // Number of witness elements
-        let beta: i32 = 50; // Example value for beta
+        let r: usize = 3; // Number of witness elements
+        let beta: usize = 50; // Example value for beta
         let s: Vec<Vec<RingElement>> = (1..=r).map(|i| {
             (1..=3).map(|j| RingElement { value: i * 3 + j }).collect()
         }).collect();
-
+        println!("s: {:?}", s);
         // Calculate the sum of squared norms
         let mut sum_squared_norms = 0;
         for vector in &s {
-            let norm_squared: i32 = vector.iter()
+            let norm_squared: usize = vector.iter()
                 .map(|elem| elem.value.pow(2)) // Calculate the square of each element
                 .sum();
             sum_squared_norms += norm_squared; // Accumulate the squared norms
@@ -117,9 +145,14 @@ mod tests {
         // Check the condition
         assert!(sum_squared_norms <= beta.pow(2), "The condition is not satisfied: sum of squared norms exceeds beta^2");
 
-        // Print the sample data for verification
-        for (index, vector) in s.iter().enumerate() {
-            println!("s_{}: {:?}", index + 1, vector);
+        let k: usize = 3; // Change k to usize
+        // calculate b^(k)
+        let mut b_values = Vec::new();
+        for i in 0..k {
+            let b_i = calculate_b_k(&s, r);
+            b_values.push(b_i);
+            println!("b^({}) = {}", i, b_i);
         }
+        // do sanity check
     }
 }
