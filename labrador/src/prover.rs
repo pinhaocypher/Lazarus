@@ -34,7 +34,7 @@ pub fn prove() {
     // 2.1 split t to t_i for all i
     // 2.1.1 get basis b1, refer to paper page 16, labrador c code line 142
     // refer to note: line => xxx
-    
+
     // 2.2 split g = <s_i, s_j> for all i, j
     // 2.2.1 get basis b2 same as 2.1.1
 
@@ -59,14 +59,14 @@ pub fn prove() {
     //      (Both using Guassian Distribution)
     // 4.3 caculate b^{''(k)}
     // 4.3.1 calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
-    // 4.3.2 calculate phi_i^{''(k)} = 
-    //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L 
+    // 4.3.2 calculate phi_i^{''(k)} =
+    //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
     //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
-    // 4.3.3 calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>) 
+    // 4.3.3 calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>)
 
     // Send b^{''(k)} to verifier
     // Verifier check: b_0^{''(k)} ?= <⟨omega^(k),p⟩> + sum(psi_l^(k) * b_0^{'(l)}) for all l = 1..L
-    
+
     // ================================================
 
     // 5. GOAL: Calculate u2 (2nd outer commitment)
@@ -74,7 +74,7 @@ pub fn prove() {
     // 5.2 phi_i = sum(alpha_k * phi_i) + beta_k * phi_i^{''(k)}
     // 5.3 h_ij = 1/2 * (<phi_i, s_j> + <phi_j, s_i>)
     // 5.4 u2 = sum D_ij * h_ij^(k) for all k = 1..(t1-1)
-    
+
     // Send u2 to verifier
 
     // ================================================
@@ -83,4 +83,39 @@ pub fn prove() {
     // 6.1 c_i is randomly chosen from C
     // 6.2 calculate z = sum(c_i * s_i) for all i = 1..r
     // Send z, t_i, g_ij, h_ij to verifier
+}
+
+// Assuming you have a RingElement type defined
+#[derive(Debug)]
+struct RingElement {
+    value: i32, // Example field, adjust as necessary
+}
+
+// create test case for setup
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_setup() {
+        let r = 5; // Number of witness elements
+        let mut s: Vec<Vec<RingElement>> = Vec::new();
+        // s0: [0, 1, 2]
+        // s1: [1, 2, 3]
+        // s2: [2, 3, 4]
+        // ...
+        // s_{r-1}: [(r-1), r, r+1]
+        for i in 0..r {
+            let vector_size = 3; // Example size of each vector
+            let s_i: Vec<RingElement> = (0..vector_size)
+                .map(|j| RingElement { value: i as i32 + j as i32 }) // Sample values
+                .collect();
+            s.push(s_i);
+        }
+
+        // Print the sample data for verification
+        for (index, vector) in s.iter().enumerate() {
+            println!("s_{}: {:?}", index + 1, vector);
+        }
+    }
 }
