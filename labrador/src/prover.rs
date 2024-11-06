@@ -99,19 +99,23 @@ mod tests {
     #[test]
     fn test_setup() {
         let r = 5; // Number of witness elements
-        let mut s: Vec<Vec<RingElement>> = Vec::new();
-        // s0: [0, 1, 2]
-        // s1: [1, 2, 3]
-        // s2: [2, 3, 4]
-        // ...
-        // s_{r-1}: [(r-1), r, r+1]
-        for i in 0..r {
-            let vector_size = 3; // Example size of each vector
-            let s_i: Vec<RingElement> = (0..vector_size)
-                .map(|j| RingElement { value: i as i32 + j as i32 }) // Sample values
-                .collect();
-            s.push(s_i);
+        let beta: i32 = 50; // Example value for beta
+        let s: Vec<Vec<RingElement>> = (1..=r).map(|i| {
+            (1..=3).map(|j| RingElement { value: i * 3 + j }).collect()
+        }).collect();
+
+        // Calculate the sum of squared norms
+        let mut sum_squared_norms = 0;
+        for vector in &s {
+            let norm_squared: i32 = vector.iter()
+                .map(|elem| elem.value.pow(2)) // Calculate the square of each element
+                .sum();
+            sum_squared_norms += norm_squared; // Accumulate the squared norms
         }
+        println!("sum_squared_norms: {}", sum_squared_norms);
+        println!("beta^2: {}", beta.pow(2));
+        // Check the condition
+        assert!(sum_squared_norms <= beta.pow(2), "The condition is not satisfied: sum of squared norms exceeds beta^2");
 
         // Print the sample data for verification
         for (index, vector) in s.iter().enumerate() {
