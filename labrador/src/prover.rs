@@ -149,6 +149,18 @@ fn calculate_a_times_s_i(a: &A, s_i: &Vec<RingPolynomial>) -> Vec<RingPolynomial
     }).collect::<Vec<Vec<RingPolynomial>>>().into_iter().flatten().collect::<Vec<RingPolynomial>>()
 }
 
+fn num_to_basis(mut num: usize, basis: usize) -> Vec<usize> {
+    if num == 0 {
+        return vec![0];
+    }
+
+    let mut vector = Vec::new();
+    while num > 0 {
+        vector.insert(0, num % basis);
+        num /= basis;
+    }
+    vector
+}
 // create test case for setup
 #[cfg(test)]
 mod tests {
@@ -232,8 +244,8 @@ mod tests {
         // 2. GOAL: calculate ajtai commitment (1st outer commitment)
         // 2.1 split t to t_i for all i
         // 2.1.1 get basis b1, refer to paper page 16, labrador c code line 142
-        // refer to note: line => xxx
-
+        // s = β / sqrt(rnd)
+        // r: s_len, n
         // 2.2 split g = <s_i, s_j> for all i, j
         // 2.2.1 get basis b2 same as 2.1.1
 
@@ -326,4 +338,29 @@ mod tests {
         let result = calculate_a_times_s_i(&a, &s_i);
         assert_eq!(result.len(), a.values.len() * s_i.len()); // Check that the result length is correct
     }
+
+    #[test]
+    fn test_num_to_basis() {
+        let num = 42;
+        let basis = 2;
+        let binary = num_to_basis(num, basis);
+        assert_eq!(binary, vec![1, 0, 1, 0, 1, 0]);
+
+        let num = 100;
+        let basis = 3;
+        let binary = num_to_basis(num, basis);
+        assert_eq!(binary, vec![1, 0, 2, 0, 1]);
+
+        let num = 100;
+        let basis = 6;
+        let binary = num_to_basis(num, basis);
+        assert_eq!(binary, vec![2, 4, 4]);
+
+        let num = 100;
+        let basis = 10;
+        let binary = num_to_basis(num, basis);
+        assert_eq!(binary, vec![1, 0, 0]);
+    }
 }
+
+
