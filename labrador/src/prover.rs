@@ -156,7 +156,7 @@ fn num_to_basis(mut num: usize, basis: usize) -> Vec<usize> {
 
     let mut vector = Vec::new();
     while num > 0 {
-        vector.insert(0, num % basis);
+        vector.push(num % basis);
         num /= basis;
     }
     vector
@@ -344,7 +344,7 @@ mod tests {
         let num = 42;
         let basis = 2;
         let binary = num_to_basis(num, basis);
-        assert_eq!(binary, vec![1, 0, 1, 0, 1, 0]);
+        assert_eq!(binary, vec![0, 1, 0, 1, 0, 1]);
 
         let num = 100;
         let basis = 3;
@@ -354,12 +354,12 @@ mod tests {
         let num = 100;
         let basis = 6;
         let binary = num_to_basis(num, basis);
-        assert_eq!(binary, vec![2, 4, 4]);
+        assert_eq!(binary, vec![4, 4, 2]);
 
         let num = 100;
         let basis = 10;
         let binary = num_to_basis(num, basis);
-        assert_eq!(binary, vec![1, 0, 0]);
+        assert_eq!(binary, vec![0, 0, 1]);
     }
 }
 
