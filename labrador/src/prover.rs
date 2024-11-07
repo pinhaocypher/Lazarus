@@ -226,6 +226,62 @@ mod tests {
         println!("size of all_t_i: {:?}", all_t_i.len());
         // check size of all_t_i is kappa
         assert!(all_t_i.len() == size_kappa);
+
+        // ================================================
+        // prover
+        // 2. GOAL: calculate ajtai commitment (1st outer commitment)
+        // 2.1 split t to t_i for all i
+        // 2.1.1 get basis b1, refer to paper page 16, labrador c code line 142
+        // refer to note: line => xxx
+
+        // 2.2 split g = <s_i, s_j> for all i, j
+        // 2.2.1 get basis b2 same as 2.1.1
+
+        // 2.3 calculate u1
+        // 2.3.1 B & C is randomly chosen
+        // 2.3.2 calculate u1 = sum(B_ik * t_i^(k)) + sum(C_ijk * g_ij^(k))
+
+
+        // ================================================
+
+        // 3. GOAL: JL projection
+        // 3.1 PI_i is randomly chosen from \Chi { -1, 0, 1 }^{256 * nd}
+        //      (Using Guassian Distribution)
+        // 3.2 caculate p_j = sum(<pi_i^(j)>, s_i) for all i-r
+        // 3.3 Verifier have to check: || p || <= \sqrt{128} * beta
+
+        // ================================================
+
+        // 4. GOAL: Aggregation
+        // 4.1 psi^(k) is randomly chosen from Z_q^{L}
+        // 4.2 omega^(k) is randomly chosen from Z_q^{256}
+        //      (Both using Guassian Distribution)
+        // 4.3 caculate b^{''(k)}
+        // 4.3.1 calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
+        // 4.3.2 calculate phi_i^{''(k)} =
+        //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
+        //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
+        // 4.3.3 calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>)
+
+        // Send b^{''(k)} to verifier
+        // Verifier check: b_0^{''(k)} ?= <⟨omega^(k),p⟩> + sum(psi_l^(k) * b_0^{'(l)}) for all l = 1..L
+
+        // ================================================
+
+        // 5. GOAL: Calculate u2 (2nd outer commitment)
+        // 5.1 vec<alpha> and vec<beta> are randomly chosen from R_q^{128/logQ} // why is this not `L`
+        // 5.2 phi_i = sum(alpha_k * phi_i) + beta_k * phi_i^{''(k)}
+        // 5.3 h_ij = 1/2 * (<phi_i, s_j> + <phi_j, s_i>)
+        // 5.4 u2 = sum D_ij * h_ij^(k) for all k = 1..(t1-1)
+
+        // Send u2 to verifier
+
+        // ================================================
+
+        // 6. GOAL: calculate z (Amortized Opening)
+        // 6.1 c_i is randomly chosen from C
+        // 6.2 calculate z = sum(c_i * s_i) for all i = 1..r
+        // Send z, t_i, g_ij, h_ij to verifier
     }
 
     #[test]
