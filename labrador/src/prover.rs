@@ -149,22 +149,30 @@ fn calculate_a_times_s_i(a: &A, s_i: &Vec<RingPolynomial>) -> Vec<RingPolynomial
     }).collect::<Vec<Vec<RingPolynomial>>>().into_iter().flatten().collect::<Vec<RingPolynomial>>()
 }
 
-fn num_to_basis(mut num: usize, basis: usize, digits: usize) -> Vec<usize> {
-    if num == 0 {
-        return vec![0];
+// convert number to basis
+// 42 = 0 * 2^7 + 1 * 2^6 + 0 * 2^5 + 1 * 2^4 + 0 * 2^3 + 1 * 2^2 + 0 * 2^1 + 0 * 2^0
+// first step: 42 / 2 = 21, result_i = 0
+// second step: 21 / 2 = 10, result_i = 1
+// third step: 10 / 2 = 5, result_i = 0
+// forth step: 5 / 2 = 2, result_i = 1
+// fifth step: 2 / 2 = 1, result_i = 0
+// sixth step: 1 / 2 = 0, result_i = 1
+
+fn num_to_basis(num: usize, basis: usize, digits: usize) -> Vec<usize> {
+    let mut result = Vec::new();
+    let mut remainder = num;
+
+    while remainder > 0 {
+        result.push(remainder % basis);
+        remainder /= basis;
     }
 
-    let mut vector = Vec::new();
-    let mut temp = Vec::new();
-    while num > 0 {
-        temp.push(num % basis);
-        num /= basis;
+    while result.len() < digits {
+        // push 0 to the highest position
+        result.push(0);
     }
-    while temp.len() < digits {
-        temp.push(0);
-    }
-    vector = temp;
-    vector
+
+    result
 }
 
 // convert ring polynomial to basis
