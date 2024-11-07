@@ -305,25 +305,28 @@ mod tests {
         // ]
         let basis = 10;
         let digits = 3; // t1
-        let t_i_basis_form: Vec<Vec<Vec<Vec<usize>>>> = all_t_i.iter().map(|t_i|
+        let all_t_i_basis_form: Vec<Vec<Vec<Vec<usize>>>> = all_t_i.iter().map(|t_i|
             t_i.iter().map(|t_i_j| ring_polynomial_to_basis(t_i_j, basis, digits)).collect::<Vec<Vec<Vec<usize>>>>()
         ).collect::<Vec<Vec<Vec<Vec<usize>>>>>();
-        println!("t_i_basis_form: {:?}", t_i_basis_form);
+        println!("all_t_i_basis_form: {:?}", all_t_i_basis_form);
         // print t_0
         println!("t_0: {:?}", all_t_i[0]);
-        println!("t_0_basis_form: {:?}", t_i_basis_form[0]);
-        let a = &t_i_basis_form[0][0];
-        println!("a: {:?}", a);
-        // Get the number of columns from the first inner vector
-        let num_cols = a[0].len();
+        println!("t_0_basis_form: {:?}", all_t_i_basis_form[0]);
+        // Start of Selection
+        for (i, t_i_j_basis_form) in all_t_i_basis_form.iter().enumerate() {
+            for (j, coeff_basis_form) in t_i_j_basis_form.iter().enumerate() {
+                println!("coeff_basis_form (all_t_i_basis_form[{}][{}]): {:?}", i, j, coeff_basis_form);
+                // Get the number of columns from the first inner vector
+                let num_cols = coeff_basis_form[0].len();
 
-        // Sum elements at each position across all inner vectors
-        let result: Vec<usize> = (0..num_cols)
-            .map(|i| a.iter().map(|row| row[i]).sum())
-            .collect();
+                // Sum elements at each position across all inner vectors
+                let result: Vec<usize> = (0..num_cols)
+                    .map(|k| coeff_basis_form.iter().map(|row| row[k]).sum())
+                    .collect();
 
-        println!("{:?}", result);
-
+                println!("result (all_t_i_basis_form[{}][{}]): {:?}", i, j, result);
+            }
+        }
         // 2
         // 2.2.1 get basis b2 same as 2.1.1
 
