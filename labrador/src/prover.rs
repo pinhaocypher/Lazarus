@@ -105,16 +105,9 @@ impl RingPolynomial {
 }
 
 // Function to calculate b^(k)
-fn calculate_b_k(s: &Vec<Vec<RingPolynomial>>, r: usize) -> usize {
-    let mut rng = rand::thread_rng();
+fn calculate_b_constraint(s: &Vec<Vec<RingPolynomial>>, r: usize, a: &Vec<Vec<usize>>, phi: &Vec<usize>) -> usize {
 
-    // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
-    let a: Vec<Vec<usize>> = (0..r).map(|_| (0..r).map(|_| rng.gen_range(1..5)).collect()).collect();
-    let phi: Vec<usize> = (0..r).map(|_| rng.gen_range(1..5)).collect();
-    println!("a: {:?}", a);
-    println!("phi: {:?}", phi);
-
-    let mut b_k = 0;
+    let mut b = 0;
 
     // Calculate b^(k)
     for i in 0..r {
@@ -123,25 +116,26 @@ fn calculate_b_k(s: &Vec<Vec<RingPolynomial>>, r: usize) -> usize {
                 // println!("x: {}, y: {}", x, y);
                 x * y
             }).sum::<usize>();
-            b_k += a[i][j] * inner_product;
+            b += a[i][j] * inner_product;
         }
         let inner_product_phi = s[i].iter().map(|elem| elem.coefficients[0]).zip(phi.iter()).map(|(x, y)| x * y).sum::<usize>();
-        b_k += inner_product_phi;
+        b += inner_product_phi;
     }
 
-    b_k
+    b
 }
 
 #[derive(Debug)]
 struct A {
-    values: Vec<Vec<RingPolynomial>>, // A matrix of random RingPolynomial values
+    // matrix size: kappa * n
+    values: Vec<Vec<RingPolynomial>>, // A matrix of RingPolynomial values
 }
 
 impl A {
-    fn new(size: usize) -> Self {
+    fn new(size_kappa: usize, size_n: usize) -> Self {
         let mut rng = rand::thread_rng();
-        let values = (0..size)
-            .map(|_| (0..size).map(|_| RingPolynomial { coefficients: (0..3).map(|_| rng.gen_range(1..10)).collect() }).collect())
+        let values = (0..size_kappa)
+            .map(|_| (0..size_n).map(|_| RingPolynomial { coefficients: (0..size_n).map(|_| rng.gen_range(1..10)).collect() }).collect())
             .collect();
         A { values }
     }
@@ -161,6 +155,7 @@ mod tests {
 
     #[test]
     fn test_setup() {
+        // s is a vector of size r. each s_i is a RingPolynomial(Rq) with n coefficients
         let s_amount: usize = 3; // r: Number of witness elements
         let s_i_length: usize = 5; // n
         let beta: usize = 50; // Example value for beta
@@ -180,32 +175,95 @@ mod tests {
         println!("beta^2: {}", beta.pow(2));
         // Check the condition
         assert!(sum_squared_norms <= beta.pow(2), "The condition is not satisfied: sum of squared norms exceeds beta^2");
-        let k: usize = 3; // Change k to usize
+
+        let mut rng = rand::thread_rng();
+        let k: usize = 6; // Change k to usize
+        // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
+        let a_k: Vec<Vec<usize>> = (0..s_amount).map(|_| (0..s_amount).map(|_| rng.gen_range(1..k)).collect()).collect();
+        let phi_k: Vec<usize> = (0..s_amount).map(|_| rng.gen_range(1..5)).collect();
+        println!("a_k: {:?}", a_k);
+        println!("phi_k: {:?}", phi_k);
+
         // calculate b^(k)
         let mut b_values_k = Vec::new();
         for i in 0..k {
-            let b_i = calculate_b_k(&s, s_amount);
+            let b_i = calculate_b_constraint(&s, s_amount, &a_k, &phi_k);
             b_values_k.push(b_i);
             println!("b^({}) = {}", i, b_i);
         }
 
-        let l: usize = 3; // Define L as usize
+        let l: usize = 4; // Define L as usize
+        // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
+        let a_l: Vec<Vec<usize>> = (0..s_amount).map(|_| (0..s_amount).map(|_| rng.gen_range(1..l)).collect()).collect();
+        println!("a_l: {:?}", a_l);
+        let phi_l: Vec<usize> = (0..s_amount).map(|_| rng.gen_range(1..5)).collect();
         // calculate b^(l)
         let mut b_values_l = Vec::new();
         for i in 0..l {
-            let b_i = calculate_b_k(&s, s_amount);
+            let b_i = calculate_b_constraint(&s, s_amount, &a_l, &phi_l);
             b_values_l.push(b_i);
             println!("b^({}) = {}", i, b_i);
         }
 
-        let size = 3; // Example size
-        let a = A::new(size);
-        println!("A: {:?}", a);
+        let size_kappa = 3; // Example size
+        let size_n = 5;
+        // A: matrix size: kappa * n, each element is RingPolynomial(Rq)
+        // calculate t_i = A * s_i for all i = 1..r
+        // size of t_i = (kappa * n)Rq * 1Rq = kappa * n
+        let matrix_a = A::new(size_kappa, size_n);
+        println!("A: {:?}", matrix_a);
+        // print size of A
+        println!("size of A: {:?} x {:?}", matrix_a.values.len(), matrix_a.values[0].len());
         let mut all_t_i = Vec::new();
         for s_i in &s {
-            let t_i = calculate_a_times_s_i(&a, &s_i);
+            let t_i = calculate_a_times_s_i(&matrix_a, &s_i);
+            println!("size of t_i: {:?}", t_i.len());
             all_t_i.push(t_i);
         }
         println!("Calculated all t_i: {:?}", all_t_i);
+        // print size of t_i
+    }
+
+    #[test]
+    fn test_multiply_by_ringpolynomial() {
+        let poly1 = RingPolynomial { coefficients: vec![1, 2] };
+        let poly2 = RingPolynomial { coefficients: vec![3, 4] };
+        let result = poly1.multiply_by_ringpolynomial(&poly2);
+        assert_eq!(result.coefficients, vec![3, 10, 8]); // 1*3, 1*4 + 2*3, 2*4
+    }
+
+    #[test]
+    fn test_calculate_b_k() {
+        let r: usize = 3;
+        let s: Vec<Vec<RingPolynomial>> = vec![
+            vec![RingPolynomial { coefficients: vec![1, 2, 3] }, RingPolynomial { coefficients: vec![4, 5, 6] }],
+            vec![RingPolynomial { coefficients: vec![7, 8, 9] }, RingPolynomial { coefficients: vec![10, 11, 12] }],
+            vec![RingPolynomial { coefficients: vec![13, 14, 15] }, RingPolynomial { coefficients: vec![16, 17, 18] }],
+        ];
+        let k: usize = 6;
+        let a_k: Vec<Vec<usize>> = (0..r).map(|_| (0..r).map(|r_i| r_i).collect()).collect();
+        let phi_k: Vec<usize> = (0..r).map(|r_i| r_i).collect();
+        let b_k = calculate_b_constraint(&s, r, &a_k, &phi_k);
+        println!("b_k: {}", b_k);
+        assert_eq!(b_k, 1983);
+    }
+
+    #[test]
+    fn test_a_new() {
+        let size: usize = 3;
+        let a = A::new(size, size);
+        assert_eq!(a.values.len(), size);
+        assert_eq!(a.values[0].len(), size);
+    }
+
+    #[test]
+    fn test_calculate_a_times_s_i() {
+        let a = A::new(2, 2);
+        let s_i = vec![
+            RingPolynomial { coefficients: vec![1, 2] },
+            RingPolynomial { coefficients: vec![3, 4] },
+        ];
+        let result = calculate_a_times_s_i(&a, &s_i);
+        assert_eq!(result.len(), a.values.len() * s_i.len()); // Check that the result length is correct
     }
 }
