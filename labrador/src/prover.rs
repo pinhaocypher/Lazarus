@@ -161,6 +161,12 @@ fn num_to_basis(mut num: usize, basis: usize) -> Vec<usize> {
     }
     vector
 }
+
+// convert ring polynomial to basis
+fn ring_polynomial_to_basis(poly: &RingPolynomial, basis: usize) -> Vec<Vec<usize>> {
+    poly.coefficients.iter().map(|coeff| num_to_basis(*coeff, basis)).collect()
+}
+
 // create test case for setup
 #[cfg(test)]
 mod tests {
@@ -360,6 +366,20 @@ mod tests {
         let basis = 10;
         let binary = num_to_basis(num, basis);
         assert_eq!(binary, vec![0, 0, 1]);
+    }
+
+
+    #[test]
+    fn test_ring_polynomial_to_basis() {
+        let poly = RingPolynomial { coefficients: vec![42, 100, 100] };
+        let basis = 2;
+        let expected_result = vec![
+            vec![0, 1, 0, 1, 0, 1],
+            vec![0, 0, 1, 0, 0, 1, 1],
+            vec![0, 0, 1, 0, 0, 1, 1],
+        ];
+        let result = ring_polynomial_to_basis(&poly, basis);
+        assert_eq!(result, expected_result);
     }
 }
 
