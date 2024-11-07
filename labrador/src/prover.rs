@@ -105,19 +105,20 @@ impl RingPolynomial {
 }
 
 // Function to calculate b^(k)
-fn calculate_b_constraint(s: &Vec<Vec<RingPolynomial>>, r: usize, a: &Vec<Vec<usize>>, phi: &Vec<usize>) -> usize {
-
+fn calculate_b_constraint(s: &Vec<Vec<RingPolynomial>>, a: &Vec<Vec<usize>>, phi: &Vec<usize>) -> usize {
     let mut b = 0;
-
+    let s_len = s.len();
     // Calculate b^(k)
-    for i in 0..r {
-        for j in 0..r {
+    for i in 0..s_len {
+        for j in 0..s_len {
+            // calculate inner product of s[i] and s[j]
             let inner_product = s[i].iter().map(|elem| elem.coefficients[0]).zip(s[j].iter().map(|elem| elem.coefficients[0])).map(|(x, y)| {
                 // println!("x: {}, y: {}", x, y);
                 x * y
             }).sum::<usize>();
             b += a[i][j] * inner_product;
         }
+        // calculate inner product of s[i] and phi
         let inner_product_phi = s[i].iter().map(|elem| elem.coefficients[0]).zip(phi.iter()).map(|(x, y)| x * y).sum::<usize>();
         b += inner_product_phi;
     }
@@ -156,10 +157,10 @@ mod tests {
     #[test]
     fn test_setup() {
         // s is a vector of size r. each s_i is a RingPolynomial(Rq) with n coefficients
-        let s_amount: usize = 3; // r: Number of witness elements
+        let s_len: usize = 3; // r: Number of witness elements
         let s_i_length: usize = 5; // n
         let beta: usize = 50; // Example value for beta
-        let s: Vec<Vec<RingPolynomial>> = (1..=s_amount).map(|i| {
+        let s: Vec<Vec<RingPolynomial>> = (1..=s_len).map(|i| {
             (1..=s_i_length).map(|j| RingPolynomial { coefficients: vec![i * 3 + j, i * 3 + j + 1, i * 3 + j + 2] }).collect()
         }).collect();
         println!("s: {:?}", s);
@@ -179,28 +180,28 @@ mod tests {
         let mut rng = rand::thread_rng();
         let k: usize = 6; // Change k to usize
         // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
-        let a_k: Vec<Vec<usize>> = (0..s_amount).map(|_| (0..s_amount).map(|_| rng.gen_range(1..k)).collect()).collect();
-        let phi_k: Vec<usize> = (0..s_amount).map(|_| rng.gen_range(1..5)).collect();
+        let a_k: Vec<Vec<usize>> = (0..s_len).map(|_| (0..s_len).map(|_| rng.gen_range(1..k)).collect()).collect();
+        let phi_k: Vec<usize> = (0..s_len).map(|_| rng.gen_range(1..5)).collect();
         println!("a_k: {:?}", a_k);
         println!("phi_k: {:?}", phi_k);
 
         // calculate b^(k)
         let mut b_values_k = Vec::new();
         for i in 0..k {
-            let b_i = calculate_b_constraint(&s, s_amount, &a_k, &phi_k);
+            let b_i = calculate_b_constraint(&s, &a_k, &phi_k);
             b_values_k.push(b_i);
             println!("b^({}) = {}", i, b_i);
         }
 
         let l: usize = 4; // Define L as usize
         // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
-        let a_l: Vec<Vec<usize>> = (0..s_amount).map(|_| (0..s_amount).map(|_| rng.gen_range(1..l)).collect()).collect();
+        let a_l: Vec<Vec<usize>> = (0..s_len).map(|_| (0..s_len).map(|_| rng.gen_range(1..l)).collect()).collect();
         println!("a_l: {:?}", a_l);
-        let phi_l: Vec<usize> = (0..s_amount).map(|_| rng.gen_range(1..5)).collect();
+        let phi_l: Vec<usize> = (0..s_len).map(|_| rng.gen_range(1..5)).collect();
         // calculate b^(l)
         let mut b_values_l = Vec::new();
         for i in 0..l {
-            let b_i = calculate_b_constraint(&s, s_amount, &a_l, &phi_l);
+            let b_i = calculate_b_constraint(&s, &a_l, &phi_l);
             b_values_l.push(b_i);
             println!("b^({}) = {}", i, b_i);
         }
@@ -243,7 +244,7 @@ mod tests {
         let k: usize = 6;
         let a_k: Vec<Vec<usize>> = (0..r).map(|_| (0..r).map(|r_i| r_i).collect()).collect();
         let phi_k: Vec<usize> = (0..r).map(|r_i| r_i).collect();
-        let b_k = calculate_b_constraint(&s, r, &a_k, &phi_k);
+        let b_k = calculate_b_constraint(&s, &a_k, &phi_k);
         println!("b_k: {}", b_k);
         assert_eq!(b_k, 1983);
     }
