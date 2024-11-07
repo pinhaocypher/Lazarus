@@ -149,22 +149,27 @@ fn calculate_a_times_s_i(a: &A, s_i: &Vec<RingPolynomial>) -> Vec<RingPolynomial
     }).collect::<Vec<Vec<RingPolynomial>>>().into_iter().flatten().collect::<Vec<RingPolynomial>>()
 }
 
-fn num_to_basis(mut num: usize, basis: usize) -> Vec<usize> {
+fn num_to_basis(mut num: usize, basis: usize, digits: usize) -> Vec<usize> {
     if num == 0 {
         return vec![0];
     }
 
     let mut vector = Vec::new();
+    let mut temp = Vec::new();
     while num > 0 {
-        vector.push(num % basis);
+        temp.push(num % basis);
         num /= basis;
     }
+    while temp.len() < digits {
+        temp.push(0);
+    }
+    vector = temp;
     vector
 }
 
 // convert ring polynomial to basis
-fn ring_polynomial_to_basis(poly: &RingPolynomial, basis: usize) -> Vec<Vec<usize>> {
-    poly.coefficients.iter().map(|coeff| num_to_basis(*coeff, basis)).collect()
+fn ring_polynomial_to_basis(poly: &RingPolynomial, basis: usize, digits: usize) -> Vec<Vec<usize>> {
+    poly.coefficients.iter().map(|coeff| num_to_basis(*coeff, basis, digits)).collect()
 }
 
 // create test case for setup
@@ -252,6 +257,54 @@ mod tests {
         // 2.1.1 get basis b1, refer to paper page 16, labrador c code line 142
         // s = β / sqrt(rnd)
         // r: s_len, n
+        // for example:
+        // t_0: [
+        //  [8, 46, 61, 71, 33, 33, 18], -> t[0][0]
+        //  [20, 54, 94, 93, 70, 33, 14], -> t[0][1]
+        //  [24, 40, 100, 85, 121, 57, 56],  -> t[0][2]
+        //  [14, 37, 91, 118, 159, 109, 72],  -> t[0][3]
+        //  [32, 100, 120, 121, 102, 103, 70],
+        //  [20, 61, 83, 76, 55, 53, 42],
+        //  [35, 67, 124, 129, 141, 92, 42],
+        //  [48, 86, 105, 59, 34, 30, 16],
+        //  [56, 127, 172, 141, 75, 44, 9],
+        //  [72, 113, 190, 144, 164, 94, 60],
+        //  [36, 69, 120, 117, 131, 94, 48],
+        //  [15, 53, 98, 111, 88, 46, 21],
+        //  [12, 56, 119, 173, 159, 100, 32],
+        //  [28, 95, 157, 144, 92, 33, 27],
+        //  [56, 127, 166, 115, 63, 37, 30]
+        // ]
+        // such as basis = 10
+        // t1: length of t[i][j][k], such as length of t[0][0][0] = 4
+        // Then:
+        // t_0_basis_form: [
+        //   [[6, 1, 0, 0], [2, 5, 0, 0], [6, 7, 0, 0], [7, 6, 0, 0], [5, 3, 0, 0], [1, 2, 0, 0], [8, 1, 0, 0]],
+        //   [[5, 0, 0, 0], [6, 4, 0, 0], [0, 7, 0, 0], [9, 9, 0, 0], [6, 9, 0, 0], [9, 8, 0, 0], [3, 6, 0, 0]],
+        //   [[0, 3, 0, 0], [7, 4, 0, 0], [8, 7, 0, 0], [2, 6, 0, 0], [3, 8, 0, 0], [9, 5, 0, 0], [0, 4, 0, 0]],
+        //   [[8, 2, 0, 0], [7, 6, 0, 0], [1, 1, 1, 0], [4, 3, 1, 0], [3, 4, 1, 0], [1, 1, 1, 0], [4, 5, 0, 0]],
+        //   [[4, 6, 0, 0], [8, 2, 1, 0], [1, 9, 1, 0], [8, 8, 1, 0], [6, 5, 1, 0], [7, 0, 1, 0], [0, 3, 0, 0]],
+        //   [[2, 1, 0, 0], [5, 3, 0, 0], [3, 6, 0, 0], [3, 6, 0, 0], [6, 7, 0, 0], [7, 5, 0, 0], [4, 5, 0, 0]],
+        //   [[5, 0, 0, 0], [6, 1, 0, 0], [9, 2, 0, 0], [6, 3, 0, 0], [1, 7, 0, 0], [8, 6, 0, 0], [3, 6, 0, 0]],
+        //   [[8, 1, 0, 0], [5, 4, 0, 0], [0, 7, 0, 0], [1, 7, 0, 0], [9, 9, 0, 0], [7, 8, 0, 0], [2, 7, 0, 0]],
+        //   [[1, 2, 0, 0], [1, 3, 0, 0], [7, 7, 0, 0], [1, 7, 0, 0], [6, 2, 1, 0], [2, 8, 0, 0], [2, 7, 0, 0]],
+        //   [[0, 4, 0, 0], [1, 6, 0, 0], [0, 0, 1, 0], [8, 2, 1, 0], [5, 8, 1, 0], [2, 6, 1, 0], [0, 8, 0, 0]],
+        //   [[2, 1, 0, 0], [9, 1, 0, 0], [7, 2, 0, 0], [7, 2, 0, 0], [2, 6, 0, 0], [9, 6, 0, 0], [4, 5, 0, 0]],
+        //   [[0, 4, 0, 0], [8, 7, 0, 0], [2, 3, 1, 0], [5, 1, 1, 0], [6, 1, 1, 0], [1, 7, 0, 0], [2, 4, 0, 0]],
+        //   [[4, 2, 0, 0], [4, 6, 0, 0], [0, 1, 1, 0], [4, 1, 1, 0], [8, 1, 1, 0], [1, 8, 0, 0], [6, 5, 0, 0]],
+        //   [[2, 4, 0, 0], [4, 0, 1, 0], [4, 7, 1, 0], [5, 8, 1, 0], [0, 7, 1, 0], [1, 1, 1, 0], [4, 5, 0, 0]],
+        //   [[8, 4, 0, 0], [8, 1, 1, 0], [8, 4, 1, 0], [2, 6, 1, 0], [6, 1, 1, 0], [7, 0, 1, 0], [0, 3, 0, 0]]
+        // ]
+        let basis = 10;
+        let digits = 4; // t1
+        let t_i_basis_form: Vec<Vec<Vec<Vec<usize>>>> = all_t_i.iter().map(|t_i|
+            t_i.iter().map(|t_i_j| ring_polynomial_to_basis(t_i_j, basis, digits)).collect::<Vec<Vec<Vec<usize>>>>()
+        ).collect::<Vec<Vec<Vec<Vec<usize>>>>>();
+        println!("t_i_basis_form: {:?}", t_i_basis_form);
+        // print t_0
+        println!("t_0: {:?}", all_t_i[0]);
+        println!("t_0_basis_form: {:?}", t_i_basis_form[0]);
+
         // 2.2 split g = <s_i, s_j> for all i, j
         // 2.2.1 get basis b2 same as 2.1.1
 
@@ -349,23 +402,27 @@ mod tests {
     fn test_num_to_basis() {
         let num = 42;
         let basis = 2;
-        let binary = num_to_basis(num, basis);
+        let digits = 6;
+        let binary = num_to_basis(num, basis, digits);
         assert_eq!(binary, vec![0, 1, 0, 1, 0, 1]);
 
         let num = 100;
         let basis = 3;
-        let binary = num_to_basis(num, basis);
-        assert_eq!(binary, vec![1, 0, 2, 0, 1]);
+        let digits = 6;
+        let binary = num_to_basis(num, basis, digits);
+        assert_eq!(binary, vec![1, 0, 2, 0, 1, 0]);
 
         let num = 100;
         let basis = 6;
-        let binary = num_to_basis(num, basis);
-        assert_eq!(binary, vec![4, 4, 2]);
+        let digits = 6;
+        let binary = num_to_basis(num, basis, digits);
+        assert_eq!(binary, vec![4, 4, 2, 0, 0, 0]);
 
         let num = 100;
         let basis = 10;
-        let binary = num_to_basis(num, basis);
-        assert_eq!(binary, vec![0, 0, 1]);
+        let digits = 6;
+        let binary = num_to_basis(num, basis, digits);
+        assert_eq!(binary, vec![0, 0, 1, 0, 0, 0]);
     }
 
 
@@ -373,12 +430,13 @@ mod tests {
     fn test_ring_polynomial_to_basis() {
         let poly = RingPolynomial { coefficients: vec![42, 100, 100] };
         let basis = 2;
+        let digits = 8;
         let expected_result = vec![
-            vec![0, 1, 0, 1, 0, 1],
-            vec![0, 0, 1, 0, 0, 1, 1],
-            vec![0, 0, 1, 0, 0, 1, 1],
+            vec![0, 1, 0, 1, 0, 1, 0, 0],
+            vec![0, 0, 1, 0, 0, 1, 1, 0],
+            vec![0, 0, 1, 0, 0, 1, 1, 0],
         ];
-        let result = ring_polynomial_to_basis(&poly, basis);
+        let result = ring_polynomial_to_basis(&poly, basis, digits);
         assert_eq!(result, expected_result);
     }
 }
