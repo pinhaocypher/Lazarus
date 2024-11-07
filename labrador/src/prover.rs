@@ -187,12 +187,11 @@ mod tests {
 
         // calculate b^(k)
         let mut b_values_k = Vec::new();
-        for i in 0..k {
+        for _ in 0..k {
             let b_i = calculate_b_constraint(&s, &a_k, &phi_k);
             b_values_k.push(b_i);
-            println!("b^({}) = {}", i, b_i);
         }
-
+        println!("b_values_k: {:?}", b_values_k);
         let l: usize = 4; // Define L as usize
         // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
         let a_l: Vec<Vec<usize>> = (0..s_len).map(|_| (0..s_len).map(|_| rng.gen_range(1..l)).collect()).collect();
@@ -200,12 +199,11 @@ mod tests {
         let phi_l: Vec<usize> = (0..s_len).map(|_| rng.gen_range(1..5)).collect();
         // calculate b^(l)
         let mut b_values_l = Vec::new();
-        for i in 0..l {
+        for _ in 0..l {
             let b_i = calculate_b_constraint(&s, &a_l, &phi_l);
             b_values_l.push(b_i);
-            println!("b^({}) = {}", i, b_i);
         }
-
+        println!("b_values_l: {:?}", b_values_l);
         let size_kappa = 3; // Example size
         let size_n = 5;
         // A: matrix size: kappa * n, each element is RingPolynomial(Rq)
@@ -215,6 +213,8 @@ mod tests {
         println!("A: {:?}", matrix_a);
         // print size of A
         println!("size of A: {:?} x {:?}", matrix_a.values.len(), matrix_a.values[0].len());
+        assert!(matrix_a.values.len() == size_kappa);
+        assert!(matrix_a.values[0].len() == size_n);
         let mut all_t_i = Vec::new();
         for s_i in &s {
             let t_i = calculate_a_times_s_i(&matrix_a, &s_i);
@@ -222,7 +222,10 @@ mod tests {
             all_t_i.push(t_i);
         }
         println!("Calculated all t_i: {:?}", all_t_i);
-        // print size of t_i
+        // print size of all_t_i
+        println!("size of all_t_i: {:?}", all_t_i.len());
+        // check size of all_t_i is kappa
+        assert!(all_t_i.len() == size_kappa);
     }
 
     #[test]
