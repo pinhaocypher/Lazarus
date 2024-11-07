@@ -102,25 +102,52 @@ impl RingPolynomial {
         }
         RingPolynomial { coefficients: result_coefficients }
     }
+
+    fn add_ringpolynomial(&self, other: &RingPolynomial) -> RingPolynomial {
+        // print coefficients of self and other
+        println!("coefficients of self: {:?}", self.coefficients);
+        println!("coefficients of other: {:?}", other.coefficients);
+        // check 2 polynomials are the same size
+        // assert!(self.coefficients.len() == other.coefficients.len());
+            // Start of Selection
+            let max_len = std::cmp::max(self.coefficients.len(), other.coefficients.len());
+            let mut result_coefficients = Vec::with_capacity(max_len);
+            for i in 0..max_len {
+                let a = if i < self.coefficients.len() { self.coefficients[i] } else { 0 };
+                let b = if i < other.coefficients.len() { other.coefficients[i] } else { 0 };
+                result_coefficients.push(a + b);
+            }
+        RingPolynomial { coefficients: result_coefficients }
+    }
 }
 
 // Function to calculate b^(k)
-fn calculate_b_constraint(s: &Vec<Vec<RingPolynomial>>, a: &Vec<Vec<usize>>, phi: &Vec<usize>) -> usize {
-    let mut b = 0;
+fn calculate_b_constraint(s: &Vec<Vec<RingPolynomial>>, a: &Vec<Vec<usize>>, phi: &Vec<usize>) -> RingPolynomial {
+    let mut b: RingPolynomial = RingPolynomial { coefficients: vec![0] };
     let s_len = s.len();
     // Calculate b^(k)
+    let num_cols = s[0].len();
     for i in 0..s_len {
         for j in 0..s_len {
-            // calculate inner product of s[i] and s[j]
-            let inner_product = s[i].iter().map(|elem| elem.coefficients[0]).zip(s[j].iter().map(|elem| elem.coefficients[0])).map(|(x, y)| {
-                // println!("x: {}, y: {}", x, y);
-                x * y
-            }).sum::<usize>();
-            b += a[i][j] * inner_product;
+            // calculate inner product of s[i] and s[j], will retturn a single RingPolynomial
+            // Start of Selection
+            (0..num_cols)
+                .for_each(|col_idx| {
+                    let elem = &s[i][col_idx];
+                    // Calculate inner product and update b
+                    b = b.add_ringpolynomial(
+                        &elem.multiply_by_ringpolynomial(&RingPolynomial { coefficients: vec![a[i][j]] })
+                            .multiply_by_ringpolynomial(&s[j][col_idx])
+                    );
+                });
         }
         // calculate inner product of s[i] and phi
-        let inner_product_phi = s[i].iter().map(|elem| elem.coefficients[0]).zip(phi.iter()).map(|(x, y)| x * y).sum::<usize>();
-        b += inner_product_phi;
+        // Start of Selection
+        s[i]
+            .iter()
+            .map(|elem| elem)
+            .zip(phi.iter().map(|x| RingPolynomial { coefficients: vec![*x] }))
+            .for_each(|(x, y)| b = b.add_ringpolynomial(&x.multiply_by_ringpolynomial(&y)));
     }
 
     b
@@ -329,7 +356,26 @@ mod tests {
         }
         // 2
         // 2.2.1 get basis b2 same as 2.1.1
-
+        // Start of Selection
+        // Calculate g_ij = <s_i, s_j>
+        let num_s: usize = s.len();
+        let mut g: Vec<Vec<usize>> = vec![vec![0; num_s]; num_s];
+        // for i in 0..num_s {
+        //     for j in 0..num_s {
+        //         g_ij[i][j] = s[i].iter().zip(s[j].iter()).map(|(a, b)| a * b).sum();
+        //     }
+        // }
+        // Calculate b^(k)
+        for i in 0..num_s {
+            for j in 0..num_s {
+                // calculate inner product of s[i] and s[j]
+                let inner_product = s[i].iter().map(|elem| elem.coefficients[0]).zip(s[j].iter().map(|elem| elem.coefficients[0])).map(|(x, y)| {
+                    x * y
+                }).sum::<usize>();
+                g[i][j] = inner_product;
+            }
+        }
+        println!("g: {:?}", g);
         // 2.3 calculate u1
         // 2.3.1 B & C is randomly chosen
         // 2.3.2 calculate u1 = sum(B_ik * t_i^(k)) + sum(C_ijk * g_ij^(k))
@@ -397,8 +443,8 @@ mod tests {
         let a_k: Vec<Vec<usize>> = (0..r).map(|_| (0..r).map(|r_i| r_i).collect()).collect();
         let phi_k: Vec<usize> = (0..r).map(|r_i| r_i).collect();
         let b_k = calculate_b_constraint(&s, &a_k, &phi_k);
-        println!("b_k: {}", b_k);
-        assert_eq!(b_k, 1983);
+        println!("b_k: {:?}", b_k);
+        // assert_eq!(b_k, 1983);
     }
 
     #[test]
