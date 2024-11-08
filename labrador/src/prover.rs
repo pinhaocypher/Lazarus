@@ -400,27 +400,50 @@ mod tests {
         ).collect::<Vec<Vec<Vec<Vec<usize>>>>>();
         println!("g_matrix_basis_form: {:?}", g_matrix_basis_form);
         // Sum elements at each position across all inner vectors, get t_i and put them into a matrix
-        let mut results_matrix_g: Vec<Vec<RingPolynomial>> = Vec::new();
+        let mut g_matrix_aggregated: Vec<Vec<Vec<RingPolynomial>>> = Vec::new();
         for (i, g_i_basis_form) in g_matrix_basis_form.iter().enumerate() {
-            let mut row_results: Vec<RingPolynomial> = Vec::new();
+            let mut row_results: Vec<Vec<RingPolynomial>> = Vec::new();
             for (j, g_i_j_basis_form) in g_i_basis_form.iter().enumerate() {
+                let mut row_results_j: Vec<RingPolynomial> = Vec::new();
                 // Get the number of columns from the first inner vector
-                let num_cols = g_i_j_basis_form[0].len();
-
-                // Sum elements at each position across all inner vectors
-                let coeffs_summed: Vec<usize> = (0..num_cols)
-                    .map(|k| g_i_j_basis_form.iter().map(|row| row[k]).sum())
-                    .collect();
-
-                println!(
-                    "coeffs_summed (g_matrix_basis_form[{}][{}]): {:?}",
-                    i, j, coeffs_summed
-                );
-                row_results.push(RingPolynomial { coefficients: coeffs_summed });
+                // t_i_j_basis_form: [[6, 1, 0], [6, 2, 0], [3, 9, 0], [8, 9, 0], [8, 3, 1], [5, 6, 0], [0, 5, 0]]
+                let num_basis_needed = g_i_j_basis_form.len();
+                let num_loop_needed = g_i_j_basis_form[0].len();
+                for k in 0..num_loop_needed {
+                    // println!("t_i_j_basis_form[{}][{}] = {:?}", i, j, t_i_j_basis_form[k]);
+                    let mut row_k: Vec<usize> = Vec::new();
+                    for basis_needed in 0..num_basis_needed {
+                        let num_to_be_pushed = g_i_j_basis_form[basis_needed][k];
+                        // println!("t_i_j_basis_form_k[{}][{}]: {:?}", basis_needed, k, num_to_be_pushed);
+                        row_k.push(num_to_be_pushed);
+                    }
+                    row_results_j.push(RingPolynomial { coefficients: row_k });
+                } // finish t_i_j_basis_form calculation
+                row_results.push(row_results_j);
             }
-            results_matrix_g.push(row_results);
+            g_matrix_aggregated.push(row_results);
         }
-        println!("results_matrix_g: {:?}", results_matrix_g);
+
+        // for (i, g_i_basis_form) in g_matrix_basis_form.iter().enumerate() {
+        //     let mut row_results: Vec<Vec<RingPolynomial>> = Vec::new();
+        //     for (j, g_i_j_basis_form) in g_i_basis_form.iter().enumerate() {
+        //         // Get the number of columns from the first inner vector
+        //         let num_cols = g_i_j_basis_form[0].len();
+
+        //         // Sum elements at each position across all inner vectors
+        //         let coeffs_summed: Vec<usize> = (0..num_cols)
+        //             .map(|k| g_i_j_basis_form.iter().map(|row| row[k]).sum())
+        //             .collect();
+
+        //         println!(
+        //             "coeffs_summed (g_matrix_basis_form[{}][{}]): {:?}",
+        //             i, j, coeffs_summed
+        //         );
+        //         row_results.push(RingPolynomial { coefficients: coeffs_summed });
+        //     }
+        //     g_matrix_aggregated.push(row_results);
+        // }
+        println!("g_matrix_aggregated: {:?}", g_matrix_aggregated);
         // 2.3 calculate u1
         // 2.3.1 B & C is randomly chosen
         // 2.3.2 calculate u1 = sum(B_ik * t_i^(k)) + sum(C_ijk * g_ij^(k))
