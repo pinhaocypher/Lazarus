@@ -104,19 +104,13 @@ impl RingPolynomial {
     }
 
     fn add_ringpolynomial(&self, other: &RingPolynomial) -> RingPolynomial {
-        // print coefficients of self and other
-        println!("coefficients of self: {:?}", self.coefficients);
-        println!("coefficients of other: {:?}", other.coefficients);
-        // check 2 polynomials are the same size
-        // assert!(self.coefficients.len() == other.coefficients.len());
-            // Start of Selection
-            let max_len = std::cmp::max(self.coefficients.len(), other.coefficients.len());
-            let mut result_coefficients = Vec::with_capacity(max_len);
-            for i in 0..max_len {
-                let a = if i < self.coefficients.len() { self.coefficients[i] } else { 0 };
-                let b = if i < other.coefficients.len() { other.coefficients[i] } else { 0 };
-                result_coefficients.push(a + b);
-            }
+        let max_len = std::cmp::max(self.coefficients.len(), other.coefficients.len());
+        let mut result_coefficients = Vec::with_capacity(max_len);
+        for i in 0..max_len {
+            let a = if i < self.coefficients.len() { self.coefficients[i] } else { 0 };
+            let b = if i < other.coefficients.len() { other.coefficients[i] } else { 0 };
+            result_coefficients.push(a + b);
+        }
         RingPolynomial { coefficients: result_coefficients }
     }
 }
