@@ -445,9 +445,72 @@ mod tests {
         // }
         println!("g_matrix_aggregated: {:?}", g_matrix_aggregated);
         // 2.3 calculate u1
-        // 2.3.1 B & C is randomly chosen
+        // 2.3.1 B & C is randomly chosen similar to A
+        let size_b = [3, 5];
+        let size_c = [3, 5];
+        let b_matrix = RqMatrix::new(size_b[0], size_b[1]);
+        let c_matrix = RqMatrix::new(size_c[0], size_c[1]);
         // 2.3.2 calculate u1 = sum(B_ik * t_i^(k)) + sum(C_ijk * g_ij^(k))
+        // Start of Selection
+        // Define necessary variables
+        let t1 = digits;
+        let t2 = digits;
+        let r = s_len;
+        let B = &b_matrix.values;
+        let C = &c_matrix.values;
+        let t = &all_t_i_basis_form_aggregated;
+        let kappa = s_len;
+        let kappa1 = 5;
+        let kappa2 = 5;
+        // Initialize u1 with zeros with size kappa1, each element is a polynomial ring
+        let mut u1 = vec![RingPolynomial { coefficients: vec![0; s_i_length] }; kappa1];
+        // B_ik: Rq^{kappa1 x kappa}, t_i: Rq^{kappa}, t_i^(k): Rq^{kappa}
+        // B_ik * t_i^(k): Rq^{kappa1}
+        // First summation: ∑ B_ik * t_i^(k), 1 ≤ i ≤ r, 0 ≤ k ≤ t1−1
+        for i in 0..r {
+            for k in 0..t1 {
+                let b_i_k = RqMatrix::new(kappa1, kappa).values;
+                let t_i_k = &t[i][k];
+                    // Start of Selection
+                    let b_ik_times_t_ik = b_i_k.iter()
+                        .map(|row| {
+                            row.iter()
+                                .zip(t_i_k.iter())
+                                .map(|(b, t)| b.multiply_by_ringpolynomial(t))
+                                .fold(RingPolynomial { coefficients: vec![0; s_i_length] }, |acc, val| acc.add_ringpolynomial(&val))
+                        })
+                        .collect::<Vec<RingPolynomial>>();
+                    // Start of Selection
+                    u1 = u1.iter()
+                           .zip(b_ik_times_t_ik.iter())
+                           .map(|(a, b)| a.add_ringpolynomial(b))
+                           .collect();
+            }
+        }
+        println!("u1: {:?}", u1);
 
+        // Second summation: ∑ C_ijk * g_ij^(k)
+        for i in 0..r {
+            for j in i..r { // i ≤ j
+                for k in 0..t2 {
+                    let c_i_j_k = RqMatrix::new(kappa2, 1).values;
+                    let g_i_j = &g_matrix_aggregated[i][j];
+                    let temp = &c_i_j_k.iter()
+                        .map(|row| {
+                            row.iter()
+                                .zip(g_i_j.iter())
+                                .map(|(c, g)| c.multiply_by_ringpolynomial(g))
+                                .fold(RingPolynomial { coefficients: vec![0; s_i_length] }, |acc, val| acc.add_ringpolynomial(&val))
+                        })
+                        .collect::<Vec<RingPolynomial>>();
+                    u1 = u1.iter()
+                           .zip(temp.iter())
+                           .map(|(a, b)| a.add_ringpolynomial(b))
+                           .collect();
+                }
+            }
+        }
+        println!("u1: {:?}", u1);
 
         // ================================================
 
