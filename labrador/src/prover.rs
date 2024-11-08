@@ -349,10 +349,11 @@ mod tests {
         // print t_0
         println!("t_0: {:?}", all_t_i[0]);
         println!("t_0_basis_form: {:?}", all_t_i_basis_form[0]);
-        // Start of Selection
+        // Sum elements at each position across all inner vectors, get t_i and put them into a matrix
+        let mut results_matrix: Vec<Vec<Vec<usize>>> = Vec::new();
         for (i, t_i_j_basis_form) in all_t_i_basis_form.iter().enumerate() {
+            let mut row_results: Vec<Vec<usize>> = Vec::new();
             for (j, coeff_basis_form) in t_i_j_basis_form.iter().enumerate() {
-                println!("coeff_basis_form (all_t_i_basis_form[{}][{}]): {:?}", i, j, coeff_basis_form);
                 // Get the number of columns from the first inner vector
                 let num_cols = coeff_basis_form[0].len();
 
@@ -361,9 +362,15 @@ mod tests {
                     .map(|k| coeff_basis_form.iter().map(|row| row[k]).sum())
                     .collect();
 
-                println!("result (all_t_i_basis_form[{}][{}]): {:?}", i, j, result);
+                println!(
+                    "result (all_t_i_basis_form[{}][{}]): {:?}",
+                    i, j, result
+                );
+                row_results.push(result);
             }
+            results_matrix.push(row_results);
         }
+        println!("results_matrix: {:?}", results_matrix);
         // 2
         // 2.2.1 get basis b2 same as 2.1.1
         // Start of Selection
