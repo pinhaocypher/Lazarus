@@ -351,28 +351,32 @@ mod tests {
         // print t_0
         println!("t_0: {:?}", all_t_i[0]);
         println!("t_0_basis_form: {:?}", all_t_i_basis_form[0]);
-        // Sum elements at each position across all inner vectors, get t_i and put them into a matrix
-        let mut results_matrix: Vec<Vec<Vec<usize>>> = Vec::new();
-        for (i, t_i_j_basis_form) in all_t_i_basis_form.iter().enumerate() {
-            let mut row_results: Vec<Vec<usize>> = Vec::new();
-            for (j, coeff_basis_form) in t_i_j_basis_form.iter().enumerate() {
+        // pick elements at each position across all inner vectors, put them into a vector
+        let mut all_t_i_basis_form_aggregated: Vec<Vec<Vec<RingPolynomial>>> = Vec::new();
+        for (i, t_i_basis_form) in all_t_i_basis_form.iter().enumerate() {
+            let mut row_results: Vec<Vec<RingPolynomial>> = Vec::new();
+            for (j, t_i_j_basis_form) in t_i_basis_form.iter().enumerate() {
+                let mut row_results_j: Vec<RingPolynomial> = Vec::new();
                 // Get the number of columns from the first inner vector
-                let num_cols = coeff_basis_form[0].len();
-
-                // Sum elements at each position across all inner vectors
-                let result: Vec<usize> = (0..num_cols)
-                    .map(|k| coeff_basis_form.iter().map(|row| row[k]).sum())
-                    .collect();
-
-                println!(
-                    "result (all_t_i_basis_form[{}][{}]): {:?}",
-                    i, j, result
-                );
-                row_results.push(result);
+                // t_i_j_basis_form: [[6, 1, 0], [6, 2, 0], [3, 9, 0], [8, 9, 0], [8, 3, 1], [5, 6, 0], [0, 5, 0]]
+                let num_basis_needed = t_i_j_basis_form.len();
+                let num_loop_needed = t_i_j_basis_form[0].len();
+                for k in 0..num_loop_needed {
+                    println!("t_i_j_basis_form[{}][{}] = {:?}", i, j, t_i_j_basis_form[k]);
+                    let t_i_j_basis_form_k = t_i_j_basis_form[k].clone();
+                    println!("t_i_j_basis_form_k: {:?}", t_i_j_basis_form_k);
+                    let mut row_k: Vec<usize> = Vec::new();
+                    for _ in 0..num_basis_needed {
+                        println!("t_i_j_basis_form_k[{}]: {:?}", k, t_i_j_basis_form_k[k]);
+                        row_k.push(t_i_j_basis_form_k[k]);
+                    }
+                    row_results_j.push(RingPolynomial { coefficients: row_k });
+                } // finish t_i_j_basis_form calculation
+                row_results.push(row_results_j);
             }
-            results_matrix.push(row_results);
+            all_t_i_basis_form_aggregated.push(row_results);
         }
-        println!("results_matrix: {:?}", results_matrix);
+        println!("all_t_i_basis_form_aggregated: {:?}", all_t_i_basis_form_aggregated);
         // 2
         // 2.2.1 get basis b2 same as 2.1.1
         // Start of Selection
