@@ -248,6 +248,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let k: usize = 6; // Change k to usize
         // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
+        // todo: aij == aji
         let a_k: Vec<Vec<usize>> = (0..s_len).map(|_| (0..s_len).map(|_| rng.gen_range(1..k)).collect()).collect();
         let phi_k: Vec<usize> = (0..s_len).map(|_| rng.gen_range(1..5)).collect();
         println!("a_k: {:?}", a_k);
@@ -262,6 +263,7 @@ mod tests {
         println!("b_values_k: {:?}", b_values_k);
         let l: usize = 4; // Define L as usize
         // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
+        // todo: aij == aji
         let a_l: Vec<Vec<usize>> = (0..s_len).map(|_| (0..s_len).map(|_| rng.gen_range(1..l)).collect()).collect();
         println!("a_l: {:?}", a_l);
         let phi_l: Vec<usize> = (0..s_len).map(|_| rng.gen_range(1..5)).collect();
@@ -324,7 +326,7 @@ mod tests {
         // t1: length of t[i][j][k], such as length of t[0][0][0] = 3
         // Then:
         // t_0_basis_form: [
-        //   [[8, 2, 0], [7, 6, 0], [4, 1, 1], [0, 0, 1], [7, 6, 0], [3, 2, 0], [6, 0, 0]],
+        //   [[8, 0, 0], [4, 6, 0], [4, 1, 1], [0, 0, 1], [7, 6, 0], [3, 2, 0], [6, 0, 0]],
         //   [[5, 4, 0], [4, 8, 0], [4, 3, 1], [9, 0, 1], [9, 8, 0], [7, 4, 0], [4, 1, 0]],
         //   [[6, 0, 0], [3, 4, 0], [0, 8, 0], [5, 2, 1], [5, 2, 1], [8, 9, 0], [8, 4, 0]],
         //   [[8, 2, 0], [0, 6, 0], [9, 8, 0], [1, 8, 0], [0, 0, 1], [3, 8, 0], [3, 6, 0]],
@@ -376,7 +378,7 @@ mod tests {
         // Start of Selection
         // Calculate g_ij = <s_i, s_j>
         let num_s: usize = s.len();
-        let mut g: Vec<Vec<RingPolynomial>> = vec![vec![RingPolynomial { coefficients: vec![0; s_i_length] }; num_s]; num_s];
+        let mut g_matrix: Vec<Vec<RingPolynomial>> = vec![vec![RingPolynomial { coefficients: vec![0; s_i_length] }; num_s]; num_s];
         // for i in 0..num_s {
         //     for j in 0..num_s {
         //         g_ij[i][j] = s[i].iter().zip(s[j].iter()).map(|(a, b)| a * b).sum();
@@ -390,10 +392,39 @@ mod tests {
                 let elem_s_j = &s[j];
                 // Calculate inner product and update b
                 let inner_product_si_sj = inner_product_ringpolynomial(&elem_s_i, &elem_s_j);
-                g[i][j] = inner_product_si_sj;
+                g_matrix[i][j] = inner_product_si_sj;
             }
         }
-        println!("g: {:?}", g);
+        println!("g_matrix: {:?}", g_matrix);
+
+        // let basis = 10;
+        // let digits = 3; // t1
+        let g_matrix_basis_form: Vec<Vec<Vec<Vec<usize>>>> = g_matrix.iter().map(|g_i|
+            g_i.iter().map(|g_i_j| ring_polynomial_to_basis(g_i_j, basis, digits)).collect::<Vec<Vec<Vec<usize>>>>()
+        ).collect::<Vec<Vec<Vec<Vec<usize>>>>>();
+        println!("g_matrix_basis_form: {:?}", g_matrix_basis_form);
+        // Sum elements at each position across all inner vectors, get t_i and put them into a matrix
+        let mut results_matrix_g: Vec<Vec<Vec<usize>>> = Vec::new();
+        for (i, g_i_basis_form) in g_matrix_basis_form.iter().enumerate() {
+            let mut row_results: Vec<Vec<usize>> = Vec::new();
+            for (j, g_i_j_basis_form) in g_i_basis_form.iter().enumerate() {
+                // Get the number of columns from the first inner vector
+                let num_cols = g_i_j_basis_form[0].len();
+
+                // Sum elements at each position across all inner vectors
+                let result: Vec<usize> = (0..num_cols)
+                    .map(|k| g_i_j_basis_form.iter().map(|row| row[k]).sum())
+                    .collect();
+
+                println!(
+                    "result (all_t_i_basis_form[{}][{}]): {:?}",
+                    i, j, result
+                );
+                row_results.push(result);
+            }
+            results_matrix_g.push(row_results);
+        }
+        println!("results_matrix_g: {:?}", results_matrix_g);
         // 2.3 calculate u1
         // 2.3.1 B & C is randomly chosen
         // 2.3.2 calculate u1 = sum(B_ik * t_i^(k)) + sum(C_ijk * g_ij^(k))
