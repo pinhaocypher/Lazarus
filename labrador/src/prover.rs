@@ -138,20 +138,18 @@ fn calculate_b_constraint(s: &Vec<Vec<RingPolynomial>>, a: &Vec<Vec<usize>>, phi
     let mut b: RingPolynomial = RingPolynomial { coefficients: vec![0] };
     let s_len = s.len();
     // Calculate b^(k)
-    let num_cols = s[0].len();
     for i in 0..s_len {
         for j in 0..s_len {
             // calculate inner product of s[i] and s[j], will retturn a single RingPolynomial
             // Start of Selection
-            (0..num_cols)
-                .for_each(|col_idx| {
-                    let elem = &s[i][col_idx];
-                    // Calculate inner product and update b
-                    b = b.add_ringpolynomial(
-                        &elem.multiply_by_ringpolynomial(&RingPolynomial { coefficients: vec![a[i][j]] })
-                            .multiply_by_ringpolynomial(&s[j][col_idx])
-                    );
-                });
+            let elem_s_i = &s[i];
+            let elem_s_j = &s[j];
+            // Calculate inner product and update b
+            let inner_product_si_sj = inner_product_ringpolynomial(&elem_s_i, &elem_s_j);
+            b = b.add_ringpolynomial(
+                &inner_product_si_sj
+                    .multiply_by_ringpolynomial(&RingPolynomial { coefficients: vec![a[i][j]] })
+            );
         }
         // calculate inner product of s[i] and phi
         // Start of Selection
