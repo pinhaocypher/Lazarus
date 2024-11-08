@@ -86,7 +86,7 @@ pub fn prove() {
 }
 
 // Assuming you have a RingPolynomial type defined
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct RingPolynomial {
     coefficients: Vec<usize>, // Example field, adjust as necessary
 }
@@ -369,7 +369,7 @@ mod tests {
         // Start of Selection
         // Calculate g_ij = <s_i, s_j>
         let num_s: usize = s.len();
-        let mut g: Vec<Vec<usize>> = vec![vec![0; num_s]; num_s];
+        let mut g: Vec<Vec<RingPolynomial>> = vec![vec![RingPolynomial { coefficients: vec![0; s_i_length] }; num_s]; num_s];
         // for i in 0..num_s {
         //     for j in 0..num_s {
         //         g_ij[i][j] = s[i].iter().zip(s[j].iter()).map(|(a, b)| a * b).sum();
@@ -379,10 +379,11 @@ mod tests {
         for i in 0..num_s {
             for j in 0..num_s {
                 // calculate inner product of s[i] and s[j]
-                let inner_product = s[i].iter().map(|elem| elem.coefficients[0]).zip(s[j].iter().map(|elem| elem.coefficients[0])).map(|(x, y)| {
-                    x * y
-                }).sum::<usize>();
-                g[i][j] = inner_product;
+                let elem_s_i = &s[i];
+                let elem_s_j = &s[j];
+                // Calculate inner product and update b
+                let inner_product_si_sj = inner_product_ringpolynomial(&elem_s_i, &elem_s_j);
+                g[i][j] = inner_product_si_sj;
             }
         }
         println!("g: {:?}", g);
