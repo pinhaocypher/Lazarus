@@ -158,23 +158,22 @@ fn calculate_b_constraint(s: &Vec<Vec<RingPolynomial>>, a: &Vec<Vec<usize>>, phi
 }
 
 #[derive(Debug)]
-struct A {
-    // matrix size: kappa * n
-    values: Vec<Vec<RingPolynomial>>, // A matrix of RingPolynomial values
+struct RqMatrix {
+    values: Vec<Vec<RingPolynomial>>, // matrix of RingPolynomial values
 }
 
-impl A {
+impl RqMatrix {
     fn new(size_kappa: usize, size_n: usize) -> Self {
         let mut rng = rand::thread_rng();
         let values = (0..size_kappa)
             .map(|_| (0..size_n).map(|_| RingPolynomial { coefficients: (0..size_n).map(|_| rng.gen_range(1..10)).collect() }).collect())
             .collect();
-        A { values }
+        RqMatrix { values }
     }
 }
 
 // calculate A matrix times s_i
-fn calculate_a_times_s_i(a: &A, s_i: &Vec<RingPolynomial>) -> Vec<RingPolynomial> {
+fn calculate_a_times_s_i(a: &RqMatrix, s_i: &Vec<RingPolynomial>) -> Vec<RingPolynomial> {
     a.values.iter().map(|row| {
         row.iter().zip(s_i.iter()).map(|(a, b)| a.multiply_by_ringpolynomial(b)).collect::<Vec<RingPolynomial>>()
     }).collect::<Vec<Vec<RingPolynomial>>>().into_iter().flatten().collect::<Vec<RingPolynomial>>()
@@ -273,15 +272,15 @@ mod tests {
         // A: matrix size: kappa * n, each element is RingPolynomial(Rq)
         // calculate t_i = A * s_i for all i = 1..r
         // size of t_i = (kappa * n)Rq * 1Rq = kappa * n
-        let matrix_a = A::new(size_kappa, size_n);
-        println!("A: {:?}", matrix_a);
+        let a_matrix = RqMatrix::new(size_kappa, size_n);
+        println!("A: {:?}", a_matrix);
         // print size of A
-        println!("size of A: {:?} x {:?}", matrix_a.values.len(), matrix_a.values[0].len());
-        assert!(matrix_a.values.len() == size_kappa);
-        assert!(matrix_a.values[0].len() == size_n);
+        println!("size of A: {:?} x {:?}", a_matrix.values.len(), a_matrix.values[0].len());
+        assert!(a_matrix.values.len() == size_kappa);
+        assert!(a_matrix.values[0].len() == size_n);
         let mut all_t_i = Vec::new();
         for s_i in &s {
-            let t_i = calculate_a_times_s_i(&matrix_a, &s_i);
+            let t_i = calculate_a_times_s_i(&a_matrix, &s_i);
             println!("size of t_i: {:?}", t_i.len());
             all_t_i.push(t_i);
         }
@@ -402,23 +401,23 @@ mod tests {
         ).collect::<Vec<Vec<Vec<Vec<usize>>>>>();
         println!("g_matrix_basis_form: {:?}", g_matrix_basis_form);
         // Sum elements at each position across all inner vectors, get t_i and put them into a matrix
-        let mut results_matrix_g: Vec<Vec<Vec<usize>>> = Vec::new();
+        let mut results_matrix_g: Vec<Vec<RingPolynomial>> = Vec::new();
         for (i, g_i_basis_form) in g_matrix_basis_form.iter().enumerate() {
-            let mut row_results: Vec<Vec<usize>> = Vec::new();
+            let mut row_results: Vec<RingPolynomial> = Vec::new();
             for (j, g_i_j_basis_form) in g_i_basis_form.iter().enumerate() {
                 // Get the number of columns from the first inner vector
                 let num_cols = g_i_j_basis_form[0].len();
 
                 // Sum elements at each position across all inner vectors
-                let result: Vec<usize> = (0..num_cols)
+                let coeffs_summed: Vec<usize> = (0..num_cols)
                     .map(|k| g_i_j_basis_form.iter().map(|row| row[k]).sum())
                     .collect();
 
                 println!(
-                    "result (all_t_i_basis_form[{}][{}]): {:?}",
-                    i, j, result
+                    "coeffs_summed (g_matrix_basis_form[{}][{}]): {:?}",
+                    i, j, coeffs_summed
                 );
-                row_results.push(result);
+                row_results.push(RingPolynomial { coefficients: coeffs_summed });
             }
             results_matrix_g.push(row_results);
         }
@@ -497,14 +496,14 @@ mod tests {
     #[test]
     fn test_a_new() {
         let size: usize = 3;
-        let a = A::new(size, size);
+        let a = RqMatrix::new(size, size);
         assert_eq!(a.values.len(), size);
         assert_eq!(a.values[0].len(), size);
     }
 
     #[test]
     fn test_calculate_a_times_s_i() {
-        let a = A::new(2, 2);
+        let a = RqMatrix::new(2, 2);
         let s_i = vec![
             RingPolynomial { coefficients: vec![1, 2] },
             RingPolynomial { coefficients: vec![3, 4] },
