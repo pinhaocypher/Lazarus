@@ -121,6 +121,18 @@ impl RingPolynomial {
     }
 }
 
+// inner product of 2 vectors of RingPolynomial
+// Start of Selection
+fn inner_product_ringpolynomial(a: &Vec<RingPolynomial>, b: &Vec<RingPolynomial>) -> RingPolynomial {
+    a.iter()
+        .zip(b.iter())
+        .map(|(a, b)| a.multiply_by_ringpolynomial(b))
+        .collect::<Vec<RingPolynomial>>()
+        .into_iter()
+        .reduce(|acc, x| acc.add_ringpolynomial(&x))
+        .unwrap()
+}
+
 // Function to calculate b^(k)
 fn calculate_b_constraint(s: &Vec<Vec<RingPolynomial>>, a: &Vec<Vec<usize>>, phi: &Vec<usize>) -> RingPolynomial {
     let mut b: RingPolynomial = RingPolynomial { coefficients: vec![0] };
@@ -506,6 +518,29 @@ mod tests {
         ];
         let result = ring_polynomial_to_basis(&poly, basis, digits);
         assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    fn test_inner_product_ringpolynomial() {
+        let a = vec![
+            RingPolynomial { coefficients: vec![1, 2, 3] },
+            RingPolynomial { coefficients: vec![4, 5, 6] },
+        ];
+        let b = vec![
+            RingPolynomial { coefficients: vec![7, 8, 9] },
+            RingPolynomial { coefficients: vec![10, 11, 12] },
+        ];
+
+        let result = inner_product_ringpolynomial(&a, &b);
+
+        // Expected result calculation:
+        // (1 + 2x + 3x^2) * (7 + 8x + 9x^2) = 7 + 22x + 46x^2 + 42x^3 + 27x^4
+        // (4 + 5x + 6x^2) * (10 + 11x + 12x^2) = 40 +  96x + 163x^2 + 126x^3 + 72x^4
+        // Sum: 47 + 116x + 209x^2 + 168x^3 + 99x^4
+
+        let expected = RingPolynomial { coefficients: vec![47, 116, 209, 168, 99] };
+
+        assert_eq!(result.coefficients, expected.coefficients);
     }
 }
 
