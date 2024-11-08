@@ -355,13 +355,12 @@ mod tests {
                 let num_basis_needed = t_i_j_basis_form.len();
                 let num_loop_needed = t_i_j_basis_form[0].len();
                 for k in 0..num_loop_needed {
-                    println!("t_i_j_basis_form[{}][{}] = {:?}", i, j, t_i_j_basis_form[k]);
-                    let t_i_j_basis_form_k = t_i_j_basis_form[k].clone();
-                    println!("t_i_j_basis_form_k: {:?}", t_i_j_basis_form_k);
+                    // println!("t_i_j_basis_form[{}][{}] = {:?}", i, j, t_i_j_basis_form[k]);
                     let mut row_k: Vec<usize> = Vec::new();
-                    for _ in 0..num_basis_needed {
-                        println!("t_i_j_basis_form_k[{}]: {:?}", k, t_i_j_basis_form_k[k]);
-                        row_k.push(t_i_j_basis_form_k[k]);
+                    for basis_needed in 0..num_basis_needed {
+                        let num_to_be_pushed = t_i_j_basis_form[basis_needed][k];
+                        // println!("t_i_j_basis_form_k[{}][{}]: {:?}", basis_needed, k, num_to_be_pushed);
+                        row_k.push(num_to_be_pushed);
                     }
                     row_results_j.push(RingPolynomial { coefficients: row_k });
                 } // finish t_i_j_basis_form calculation
