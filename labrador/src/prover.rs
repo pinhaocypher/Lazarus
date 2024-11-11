@@ -1,3 +1,4 @@
+use profiler_macro::time_profiler;
 use rand::Rng;
 
 pub fn setup() {
@@ -28,6 +29,7 @@ pub fn setup() {
     // L = |F'| = ceiling(128 / logQ)
 }
 
+#[time_profiler()]
 pub fn prove() {
     println!("Proving something...");
     // 2. GOAL: calculate ajtai commitment (1st outer commitment)
@@ -41,7 +43,6 @@ pub fn prove() {
     // 2.3 calculate u1
     // 2.3.1 B & C is randomly chosen
     // 2.3.2 calculate u1 = sum(B_ik * t_i^(k)) + sum(C_ijk * g_ij^(k))
-
 
     // ================================================
 
@@ -94,30 +95,46 @@ struct RingPolynomial {
 impl RingPolynomial {
     // Add this method to enable multiplication by RingPolynomial
     fn multiply_by_ringpolynomial(&self, other: &RingPolynomial) -> RingPolynomial {
-        let mut result_coefficients = vec![0; self.coefficients.len() + other.coefficients.len() - 1];
+        let mut result_coefficients =
+            vec![0; self.coefficients.len() + other.coefficients.len() - 1];
         for (i, &coeff1) in self.coefficients.iter().enumerate() {
             for (j, &coeff2) in other.coefficients.iter().enumerate() {
                 result_coefficients[i + j] += coeff1 * coeff2;
             }
         }
-        RingPolynomial { coefficients: result_coefficients }
+        RingPolynomial {
+            coefficients: result_coefficients,
+        }
     }
 
     fn add_ringpolynomial(&self, other: &RingPolynomial) -> RingPolynomial {
         let max_len = std::cmp::max(self.coefficients.len(), other.coefficients.len());
         let mut result_coefficients = Vec::with_capacity(max_len);
         for i in 0..max_len {
-            let a = if i < self.coefficients.len() { self.coefficients[i] } else { 0 };
-            let b = if i < other.coefficients.len() { other.coefficients[i] } else { 0 };
+            let a = if i < self.coefficients.len() {
+                self.coefficients[i]
+            } else {
+                0
+            };
+            let b = if i < other.coefficients.len() {
+                other.coefficients[i]
+            } else {
+                0
+            };
             result_coefficients.push(a + b);
         }
-        RingPolynomial { coefficients: result_coefficients }
+        RingPolynomial {
+            coefficients: result_coefficients,
+        }
     }
 }
 
 // inner product of 2 vectors of RingPolynomial
 // Start of Selection
-fn inner_product_ringpolynomial(a: &Vec<RingPolynomial>, b: &Vec<RingPolynomial>) -> RingPolynomial {
+fn inner_product_ringpolynomial(
+    a: &Vec<RingPolynomial>,
+    b: &Vec<RingPolynomial>,
+) -> RingPolynomial {
     a.iter()
         .zip(b.iter())
         .map(|(a, b)| a.multiply_by_ringpolynomial(b))
@@ -128,8 +145,14 @@ fn inner_product_ringpolynomial(a: &Vec<RingPolynomial>, b: &Vec<RingPolynomial>
 }
 
 // Function to calculate b^(k)
-fn calculate_b_constraint(s: &Vec<Vec<RingPolynomial>>, a: &Vec<Vec<usize>>, phi: &Vec<usize>) -> RingPolynomial {
-    let mut b: RingPolynomial = RingPolynomial { coefficients: vec![0] };
+fn calculate_b_constraint(
+    s: &Vec<Vec<RingPolynomial>>,
+    a: &Vec<Vec<usize>>,
+    phi: &Vec<usize>,
+) -> RingPolynomial {
+    let mut b: RingPolynomial = RingPolynomial {
+        coefficients: vec![0],
+    };
     let s_len = s.len();
     // Calculate b^(k)
     for i in 0..s_len {
@@ -140,17 +163,19 @@ fn calculate_b_constraint(s: &Vec<Vec<RingPolynomial>>, a: &Vec<Vec<usize>>, phi
             let elem_s_j = &s[j];
             // Calculate inner product and update b
             let inner_product_si_sj = inner_product_ringpolynomial(&elem_s_i, &elem_s_j);
-            b = b.add_ringpolynomial(
-                &inner_product_si_sj
-                    .multiply_by_ringpolynomial(&RingPolynomial { coefficients: vec![a[i][j]] })
-            );
+            b = b.add_ringpolynomial(&inner_product_si_sj.multiply_by_ringpolynomial(
+                &RingPolynomial {
+                    coefficients: vec![a[i][j]],
+                },
+            ));
         }
         // calculate inner product of s[i] and phi
         // Start of Selection
-        s[i]
-            .iter()
+        s[i].iter()
             .map(|elem| elem)
-            .zip(phi.iter().map(|x| RingPolynomial { coefficients: vec![*x] }))
+            .zip(phi.iter().map(|x| RingPolynomial {
+                coefficients: vec![*x],
+            }))
             .for_each(|(x, y)| b = b.add_ringpolynomial(&x.multiply_by_ringpolynomial(&y)));
     }
 
@@ -166,7 +191,13 @@ impl RqMatrix {
     fn new(size_kappa: usize, size_n: usize) -> Self {
         let mut rng = rand::thread_rng();
         let values = (0..size_kappa)
-            .map(|_| (0..size_n).map(|_| RingPolynomial { coefficients: (0..size_n).map(|_| rng.gen_range(1..10)).collect() }).collect())
+            .map(|_| {
+                (0..size_n)
+                    .map(|_| RingPolynomial {
+                        coefficients: (0..size_n).map(|_| rng.gen_range(1..10)).collect(),
+                    })
+                    .collect()
+            })
             .collect();
         RqMatrix { values }
     }
@@ -174,9 +205,18 @@ impl RqMatrix {
 
 // Ajtai commitment: calculate A matrix times s_i
 fn calculate_a_times_s_i(a: &RqMatrix, s_i: &Vec<RingPolynomial>) -> Vec<RingPolynomial> {
-    a.values.iter().map(|row| {
-        row.iter().zip(s_i.iter()).map(|(a, b)| a.multiply_by_ringpolynomial(b)).collect::<Vec<RingPolynomial>>()
-    }).collect::<Vec<Vec<RingPolynomial>>>().into_iter().flatten().collect::<Vec<RingPolynomial>>()
+    a.values
+        .iter()
+        .map(|row| {
+            row.iter()
+                .zip(s_i.iter())
+                .map(|(a, b)| a.multiply_by_ringpolynomial(b))
+                .collect::<Vec<RingPolynomial>>()
+        })
+        .collect::<Vec<Vec<RingPolynomial>>>()
+        .into_iter()
+        .flatten()
+        .collect::<Vec<RingPolynomial>>()
 }
 
 // convert number to basis
@@ -207,7 +247,10 @@ fn num_to_basis(num: usize, basis: usize, digits: usize) -> Vec<usize> {
 
 // convert ring polynomial to basis
 fn ring_polynomial_to_basis(poly: &RingPolynomial, basis: usize, digits: usize) -> Vec<Vec<usize>> {
-    poly.coefficients.iter().map(|coeff| num_to_basis(*coeff, basis, digits)).collect()
+    poly.coefficients
+        .iter()
+        .map(|coeff| num_to_basis(*coeff, basis, digits))
+        .collect()
 }
 
 // create test case for setup
@@ -221,14 +264,21 @@ mod tests {
         let s_len: usize = 3; // r: Number of witness elements
         let s_i_length: usize = 5; // n
         let beta: usize = 50; // Example value for beta
-        let s: Vec<Vec<RingPolynomial>> = (1..=s_len).map(|i| {
-            (1..=s_i_length).map(|j| RingPolynomial { coefficients: vec![i * 3 + j, i * 3 + j + 1, i * 3 + j + 2] }).collect()
-        }).collect();
+        let s: Vec<Vec<RingPolynomial>> = (1..=s_len)
+            .map(|i| {
+                (1..=s_i_length)
+                    .map(|j| RingPolynomial {
+                        coefficients: vec![i * 3 + j, i * 3 + j + 1, i * 3 + j + 2],
+                    })
+                    .collect()
+            })
+            .collect();
         println!("s: {:?}", s);
         // Calculate the sum of squared norms
         let mut sum_squared_norms = 0;
         for vector in &s {
-            let norm_squared: usize = vector.iter()
+            let norm_squared: usize = vector
+                .iter()
                 .map(|elem| elem.coefficients[0].pow(2)) // Calculate the square of each element
                 .sum();
             sum_squared_norms += norm_squared; // Accumulate the squared norms
@@ -236,13 +286,18 @@ mod tests {
         println!("sum_squared_norms: {}", sum_squared_norms);
         println!("beta^2: {}", beta.pow(2));
         // Check the condition
-        assert!(sum_squared_norms <= beta.pow(2), "The condition is not satisfied: sum of squared norms exceeds beta^2");
+        assert!(
+            sum_squared_norms <= beta.pow(2),
+            "The condition is not satisfied: sum of squared norms exceeds beta^2"
+        );
 
         let mut rng = rand::thread_rng();
         let k: usize = 6; // Change k to usize
-        // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
-        // todo: aij == aji
-        let a_k: Vec<Vec<usize>> = (0..s_len).map(|_| (0..s_len).map(|_| rng.gen_range(1..k)).collect()).collect();
+                          // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
+                          // todo: aij == aji
+        let a_k: Vec<Vec<usize>> = (0..s_len)
+            .map(|_| (0..s_len).map(|_| rng.gen_range(1..k)).collect())
+            .collect();
         let phi_k: Vec<usize> = (0..s_len).map(|_| rng.gen_range(1..5)).collect();
         println!("a_k: {:?}", a_k);
         println!("phi_k: {:?}", phi_k);
@@ -255,9 +310,11 @@ mod tests {
         }
         println!("b_values_k: {:?}", b_values_k);
         let l: usize = 4; // Define L as usize
-        // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
-        // todo: aij == aji
-        let a_l: Vec<Vec<usize>> = (0..s_len).map(|_| (0..s_len).map(|_| rng.gen_range(1..l)).collect()).collect();
+                          // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
+                          // todo: aij == aji
+        let a_l: Vec<Vec<usize>> = (0..s_len)
+            .map(|_| (0..s_len).map(|_| rng.gen_range(1..l)).collect())
+            .collect();
         println!("a_l: {:?}", a_l);
         let phi_l: Vec<usize> = (0..s_len).map(|_| rng.gen_range(1..5)).collect();
         // calculate b^(l)
@@ -275,7 +332,11 @@ mod tests {
         let a_matrix = RqMatrix::new(size_kappa, size_n);
         println!("A: {:?}", a_matrix);
         // print size of A
-        println!("size of A: {:?} x {:?}", a_matrix.values.len(), a_matrix.values[0].len());
+        println!(
+            "size of A: {:?} x {:?}",
+            a_matrix.values.len(),
+            a_matrix.values[0].len()
+        );
         assert!(a_matrix.values.len() == size_kappa);
         assert!(a_matrix.values[0].len() == size_n);
         let mut all_t_i = Vec::new();
@@ -337,9 +398,14 @@ mod tests {
         // ]
         let basis = 10;
         let digits = 3; // t1
-        let all_t_i_basis_form: Vec<Vec<Vec<Vec<usize>>>> = all_t_i.iter().map(|t_i|
-            t_i.iter().map(|t_i_j| ring_polynomial_to_basis(t_i_j, basis, digits)).collect::<Vec<Vec<Vec<usize>>>>()
-        ).collect::<Vec<Vec<Vec<Vec<usize>>>>>();
+        let all_t_i_basis_form: Vec<Vec<Vec<Vec<usize>>>> = all_t_i
+            .iter()
+            .map(|t_i| {
+                t_i.iter()
+                    .map(|t_i_j| ring_polynomial_to_basis(t_i_j, basis, digits))
+                    .collect::<Vec<Vec<Vec<usize>>>>()
+            })
+            .collect::<Vec<Vec<Vec<Vec<usize>>>>>();
         println!("all_t_i_basis_form: {:?}", all_t_i_basis_form);
         // print t_0
         println!("t_0: {:?}", all_t_i[0]);
@@ -362,19 +428,32 @@ mod tests {
                         // println!("t_i_j_basis_form_k[{}][{}]: {:?}", basis_needed, k, num_to_be_pushed);
                         row_k.push(num_to_be_pushed);
                     }
-                    row_results_j.push(RingPolynomial { coefficients: row_k });
+                    row_results_j.push(RingPolynomial {
+                        coefficients: row_k,
+                    });
                 } // finish t_i_j_basis_form calculation
                 row_results.push(row_results_j);
             }
             all_t_i_basis_form_aggregated.push(row_results);
         }
-        println!("all_t_i_basis_form_aggregated: {:?}", all_t_i_basis_form_aggregated);
+        println!(
+            "all_t_i_basis_form_aggregated: {:?}",
+            all_t_i_basis_form_aggregated
+        );
         // 2
         // 2.2.1 get basis b2 same as 2.1.1
         // Start of Selection
         // Calculate g_ij = <s_i, s_j>
         let num_s: usize = s.len();
-        let mut g_matrix: Vec<Vec<RingPolynomial>> = vec![vec![RingPolynomial { coefficients: vec![0; s_i_length] }; num_s]; num_s];
+        let mut g_matrix: Vec<Vec<RingPolynomial>> = vec![
+            vec![
+                RingPolynomial {
+                    coefficients: vec![0; s_i_length]
+                };
+                num_s
+            ];
+            num_s
+        ];
         // for i in 0..num_s {
         //     for j in 0..num_s {
         //         g_ij[i][j] = s[i].iter().zip(s[j].iter()).map(|(a, b)| a * b).sum();
@@ -395,9 +474,14 @@ mod tests {
 
         // let basis = 10;
         // let digits = 3; // t1
-        let g_matrix_basis_form: Vec<Vec<Vec<Vec<usize>>>> = g_matrix.iter().map(|g_i|
-            g_i.iter().map(|g_i_j| ring_polynomial_to_basis(g_i_j, basis, digits)).collect::<Vec<Vec<Vec<usize>>>>()
-        ).collect::<Vec<Vec<Vec<Vec<usize>>>>>();
+        let g_matrix_basis_form: Vec<Vec<Vec<Vec<usize>>>> = g_matrix
+            .iter()
+            .map(|g_i| {
+                g_i.iter()
+                    .map(|g_i_j| ring_polynomial_to_basis(g_i_j, basis, digits))
+                    .collect::<Vec<Vec<Vec<usize>>>>()
+            })
+            .collect::<Vec<Vec<Vec<Vec<usize>>>>>();
         println!("g_matrix_basis_form: {:?}", g_matrix_basis_form);
         // Sum elements at each position across all inner vectors, get t_i and put them into a matrix
         let mut g_matrix_aggregated: Vec<Vec<Vec<RingPolynomial>>> = Vec::new();
@@ -417,7 +501,9 @@ mod tests {
                         // println!("t_i_j_basis_form_k[{}][{}]: {:?}", basis_needed, k, num_to_be_pushed);
                         row_k.push(num_to_be_pushed);
                     }
-                    row_results_j.push(RingPolynomial { coefficients: row_k });
+                    row_results_j.push(RingPolynomial {
+                        coefficients: row_k,
+                    });
                 } // finish t_i_j_basis_form calculation
                 row_results.push(row_results_j);
             }
@@ -444,7 +530,12 @@ mod tests {
         let kappa1 = 5;
         let kappa2 = 5;
         // Initialize u1 with zeros with size kappa1, each element is a polynomial ring
-        let mut u1 = vec![RingPolynomial { coefficients: vec![0; s_i_length] }; kappa1];
+        let mut u1 = vec![
+            RingPolynomial {
+                coefficients: vec![0; s_i_length]
+            };
+            kappa1
+        ];
         // B_ik: Rq^{kappa1 x kappa}, t_i: Rq^{kappa}, t_i^(k): Rq^{kappa}
         // B_ik * t_i^(k): Rq^{kappa1}
         // First summation: ∑ B_ik * t_i^(k), 1 ≤ i ≤ r, 0 ≤ k ≤ t1−1
@@ -452,40 +543,55 @@ mod tests {
             for k in 0..t1 {
                 let b_i_k = RqMatrix::new(kappa1, kappa).values;
                 let t_i_k = &t[i][k];
-                let b_ik_times_t_ik = b_i_k.iter()
+                let b_ik_times_t_ik = b_i_k
+                    .iter()
                     .map(|row| {
                         row.iter()
                             .zip(t_i_k.iter())
                             .map(|(b, t)| b.multiply_by_ringpolynomial(t))
-                            .fold(RingPolynomial { coefficients: vec![0; s_i_length] }, |acc, val| acc.add_ringpolynomial(&val))
+                            .fold(
+                                RingPolynomial {
+                                    coefficients: vec![0; s_i_length],
+                                },
+                                |acc, val| acc.add_ringpolynomial(&val),
+                            )
                     })
                     .collect::<Vec<RingPolynomial>>();
-                u1 = u1.iter()
-                        .zip(b_ik_times_t_ik.iter())
-                        .map(|(a, b)| a.add_ringpolynomial(b))
-                        .collect();
+                u1 = u1
+                    .iter()
+                    .zip(b_ik_times_t_ik.iter())
+                    .map(|(a, b)| a.add_ringpolynomial(b))
+                    .collect();
             }
         }
         println!("u1: {:?}", u1);
 
         // Second summation: ∑ C_ijk * g_ij^(k)
         for i in 0..r {
-            for j in i..r { // i ≤ j
+            for j in i..r {
+                // i ≤ j
                 for k in 0..t2 {
                     let c_i_j_k = RqMatrix::new(kappa2, 1).values;
                     let g_i_j = &g_matrix_aggregated[i][j];
-                    let temp = &c_i_j_k.iter()
+                    let temp = &c_i_j_k
+                        .iter()
                         .map(|row| {
                             row.iter()
                                 .zip(g_i_j.iter())
                                 .map(|(c, g)| c.multiply_by_ringpolynomial(g))
-                                .fold(RingPolynomial { coefficients: vec![0; s_i_length] }, |acc, val| acc.add_ringpolynomial(&val))
+                                .fold(
+                                    RingPolynomial {
+                                        coefficients: vec![0; s_i_length],
+                                    },
+                                    |acc, val| acc.add_ringpolynomial(&val),
+                                )
                         })
                         .collect::<Vec<RingPolynomial>>();
-                    u1 = u1.iter()
-                           .zip(temp.iter())
-                           .map(|(a, b)| a.add_ringpolynomial(b))
-                           .collect();
+                    u1 = u1
+                        .iter()
+                        .zip(temp.iter())
+                        .map(|(a, b)| a.add_ringpolynomial(b))
+                        .collect();
                 }
             }
         }
@@ -535,8 +641,12 @@ mod tests {
 
     #[test]
     fn test_multiply_by_ringpolynomial() {
-        let poly1 = RingPolynomial { coefficients: vec![1, 2] };
-        let poly2 = RingPolynomial { coefficients: vec![3, 4] };
+        let poly1 = RingPolynomial {
+            coefficients: vec![1, 2],
+        };
+        let poly2 = RingPolynomial {
+            coefficients: vec![3, 4],
+        };
         let result = poly1.multiply_by_ringpolynomial(&poly2);
         assert_eq!(result.coefficients, vec![3, 10, 8]); // 1*3, 1*4 + 2*3, 2*4
     }
@@ -545,9 +655,30 @@ mod tests {
     fn test_calculate_b_k() {
         let r: usize = 3;
         let s: Vec<Vec<RingPolynomial>> = vec![
-            vec![RingPolynomial { coefficients: vec![1, 2, 3] }, RingPolynomial { coefficients: vec![4, 5, 6] }],
-            vec![RingPolynomial { coefficients: vec![7, 8, 9] }, RingPolynomial { coefficients: vec![10, 11, 12] }],
-            vec![RingPolynomial { coefficients: vec![13, 14, 15] }, RingPolynomial { coefficients: vec![16, 17, 18] }],
+            vec![
+                RingPolynomial {
+                    coefficients: vec![1, 2, 3],
+                },
+                RingPolynomial {
+                    coefficients: vec![4, 5, 6],
+                },
+            ],
+            vec![
+                RingPolynomial {
+                    coefficients: vec![7, 8, 9],
+                },
+                RingPolynomial {
+                    coefficients: vec![10, 11, 12],
+                },
+            ],
+            vec![
+                RingPolynomial {
+                    coefficients: vec![13, 14, 15],
+                },
+                RingPolynomial {
+                    coefficients: vec![16, 17, 18],
+                },
+            ],
         ];
         let k: usize = 6;
         let a_k: Vec<Vec<usize>> = (0..r).map(|_| (0..r).map(|r_i| r_i).collect()).collect();
@@ -569,8 +700,12 @@ mod tests {
     fn test_calculate_a_times_s_i() {
         let a = RqMatrix::new(2, 2);
         let s_i = vec![
-            RingPolynomial { coefficients: vec![1, 2] },
-            RingPolynomial { coefficients: vec![3, 4] },
+            RingPolynomial {
+                coefficients: vec![1, 2],
+            },
+            RingPolynomial {
+                coefficients: vec![3, 4],
+            },
         ];
         let result = calculate_a_times_s_i(&a, &s_i);
         assert_eq!(result.len(), a.values.len() * s_i.len()); // Check that the result length is correct
@@ -603,10 +738,11 @@ mod tests {
         assert_eq!(binary, vec![0, 0, 1, 0, 0, 0]);
     }
 
-
     #[test]
     fn test_ring_polynomial_to_basis() {
-        let poly = RingPolynomial { coefficients: vec![42, 100, 100] };
+        let poly = RingPolynomial {
+            coefficients: vec![42, 100, 100],
+        };
         let basis = 2;
         let digits = 8;
         let expected_result = vec![
@@ -621,12 +757,20 @@ mod tests {
     #[test]
     fn test_inner_product_ringpolynomial() {
         let a = vec![
-            RingPolynomial { coefficients: vec![1, 2, 3] },
-            RingPolynomial { coefficients: vec![4, 5, 6] },
+            RingPolynomial {
+                coefficients: vec![1, 2, 3],
+            },
+            RingPolynomial {
+                coefficients: vec![4, 5, 6],
+            },
         ];
         let b = vec![
-            RingPolynomial { coefficients: vec![7, 8, 9] },
-            RingPolynomial { coefficients: vec![10, 11, 12] },
+            RingPolynomial {
+                coefficients: vec![7, 8, 9],
+            },
+            RingPolynomial {
+                coefficients: vec![10, 11, 12],
+            },
         ];
 
         let result = inner_product_ringpolynomial(&a, &b);
@@ -636,10 +780,10 @@ mod tests {
         // (4 + 5x + 6x^2) * (10 + 11x + 12x^2) = 40 +  96x + 163x^2 + 126x^3 + 72x^4
         // Sum: 47 + 116x + 209x^2 + 168x^3 + 99x^4
 
-        let expected = RingPolynomial { coefficients: vec![47, 116, 209, 168, 99] };
+        let expected = RingPolynomial {
+            coefficients: vec![47, 116, 209, 168, 99],
+        };
 
         assert_eq!(result.coefficients, expected.coefficients);
     }
 }
-
-
