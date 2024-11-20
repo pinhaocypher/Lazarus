@@ -484,6 +484,7 @@ mod tests {
             .collect::<Vec<Vec<Vec<Vec<usize>>>>>();
         println!("g_matrix_basis_form: {:?}", g_matrix_basis_form);
         // Sum elements at each position across all inner vectors, get t_i and put them into a matrix
+        // g is a matrix, each element is a s_i(Rq^n)
         let mut g_matrix_aggregated: Vec<Vec<Vec<RingPolynomial>>> = Vec::new();
         for (i, g_i_basis_form) in g_matrix_basis_form.iter().enumerate() {
             let mut row_results: Vec<Vec<RingPolynomial>> = Vec::new();
