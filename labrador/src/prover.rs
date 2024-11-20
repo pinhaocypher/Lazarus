@@ -454,11 +454,6 @@ mod tests {
             ];
             num_s
         ];
-        // for i in 0..num_s {
-        //     for j in 0..num_s {
-        //         g_ij[i][j] = s[i].iter().zip(s[j].iter()).map(|(a, b)| a * b).sum();
-        //     }
-        // }
         // Calculate b^(k)
         for i in 0..num_s {
             for j in 0..num_s {
