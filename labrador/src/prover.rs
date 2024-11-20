@@ -539,6 +539,7 @@ mod tests {
             for k in 0..t1 {
                 let b_i_k = RqMatrix::new(kappa1, kappa).values;
                 let t_i_k = &t[i][k];
+                // matrix<Rq> * vector<Rq> -> vector<Rq>
                 let b_ik_times_t_ik = b_i_k
                     .iter()
                     .map(|row| {
@@ -569,7 +570,7 @@ mod tests {
                 for k in 0..t2 {
                     let c_i_j_k = RqMatrix::new(kappa2, 1).values;
                     let g_i_j = &g_matrix_aggregated[i][j];
-                    let temp = &c_i_j_k
+                    let c_i_j_k_times_g_i_j = c_i_j_k
                         .iter()
                         .map(|row| {
                             row.iter()
@@ -585,7 +586,7 @@ mod tests {
                         .collect::<Vec<RingPolynomial>>();
                     u1 = u1
                         .iter()
-                        .zip(temp.iter())
+                        .zip(c_i_j_k_times_g_i_j.iter())
                         .map(|(a, b)| a.add_ringpolynomial(b))
                         .collect();
                 }
