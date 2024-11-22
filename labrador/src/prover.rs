@@ -259,7 +259,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_setup() {
+    fn test_setup_prover() {
+        let lambda: usize = 128;
         // s is a vector of size r. each s_i is a RingPolynomial(Rq) with n coefficients
         let s_len: usize = 3; // r: Number of witness elements
         let s_i_length: usize = 5; // n
