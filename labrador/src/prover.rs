@@ -319,6 +319,7 @@ mod tests {
         let phi_l: Vec<usize> = (0..s_len).map(|_| rng.gen_range(1..5)).collect();
         // calculate b^(l)
         let mut b_values_l = Vec::new();
+        // todo: only need to keep constant term?
         for _ in 0..l {
             let b_i = calculate_b_constraint(&s, &a_l, &phi_l);
             b_values_l.push(b_i);
