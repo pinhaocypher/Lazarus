@@ -615,7 +615,7 @@ mod tests {
             - p_j = sum(<pi_i^(j), s_i>) for all i = 1..r, is a Zq
             - vector p = [p_1, p_2, ..., p_256], is a vector with length 256(2λ), type Vec<Zq>
         */
-        let mut p: Vec<usize> = Vec::with_capacity(256);
+
         // concat all s_i's coefficients into a vector
         // such as: s = [s_0, s_1]
         // s_0: [PolynomialRing{coefficients: [1, 2, 3]}, PolynomialRing{coefficients: [4, 5, 6]}, PolynomialRing{coefficients: [7, 8, 9]}], output: ss_0 = [1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -627,12 +627,17 @@ mod tests {
 
         println!("s_coeffs: {:?}", s_coeffs);
         // implement p calculation, inner product each element of gaussian_distribution_matrix and each element of s_coeffs
-        for (g_row, s_row) in gaussian_distribution_matrix.iter().zip(s_coeffs.iter()) {
-            let inner_product: usize = g_row.iter().zip(s_row.iter()).map(|(a, b)| *a * *b as i32).sum::<i32>() as usize;
-            p.push(inner_product);
+        let mut p: Vec<usize> = Vec::with_capacity(256);
+        for g_row in gaussian_distribution_matrix.iter() {
+            println!("g_row: {:?}", g_row);
+            let mut sum = 0;
+            for s_row in s_coeffs.iter() {
+                sum += g_row.iter().zip(s_row.iter()).map(|(a, b)| *a * *b as i32).sum::<i32>();
+            }
+            p.push(sum as usize);
         }
         println!("p: {:?}", p);
-
+        assert_eq!(p.len(), 256);
         // todo: send p to verifier(put in transcript)
 
         // 3.3 Verifier have to check: || p || <= \sqrt{128} * beta
