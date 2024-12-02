@@ -253,6 +253,26 @@ fn ring_polynomial_to_basis(poly: &RingPolynomial, basis: usize, digits: usize) 
         .collect()
 }
 
+fn generate_gaussian_distribution(nd: usize) -> Vec<Vec<i32>> {
+    let mut rng = rand::thread_rng();
+    let mut matrix = vec![vec![0; nd]; 256]; // Initialize a 256 x nd matrix
+
+    for i in 0..256 {
+        for j in 0..nd {
+            let random_value: f32 = rng.gen(); // Generate a random float between 0 and 1
+            matrix[i][j] = if random_value < 0.25 {
+                -1 // 1/4 probability
+            } else if random_value < 0.75 {
+                0 // 1/2 probability
+            } else {
+                1 // 1/4 probability
+            };
+        }
+    }
+
+    matrix
+}
+
 // create test case for setup
 #[cfg(test)]
 mod tests {
@@ -782,5 +802,17 @@ mod tests {
         };
 
         assert_eq!(result.coefficients, expected.coefficients);
+    }
+
+    #[test]
+    fn test_generate_gaussian_distribution() {
+        let nd = 10;
+        let matrix = generate_gaussian_distribution(nd);
+        println!("matrix: {:?}", matrix);
+        assert_eq!(matrix.len(), 256);
+        assert_eq!(matrix[0].len(), nd);
+        assert_eq!(matrix[1].len(), nd);
+        assert!(matrix.iter().all(|row| row.iter().all(|&val| val == -1 || val == 0 || val == 1)));
+
     }
 }
