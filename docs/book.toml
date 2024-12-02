@@ -6,3 +6,4 @@ src = "src"
 title = "⚡Lazarus⚡"
 
 [preprocessor.katex]
+after = ["links"]
