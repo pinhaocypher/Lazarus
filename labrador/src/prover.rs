@@ -282,7 +282,7 @@ mod tests {
     fn test_setup_prover() {
         let lambda: usize = 128;
         let q = 2usize.pow(32 as u32);
-        let d = 64;
+        let d = 3; // todo: should be 64
         // s is a vector of size r. each s_i is a PolynomialRing(Rq) with n coefficients
         let s_len: usize = 3; // r: Number of witness elements
         let size_n: usize = 5; // n
@@ -599,9 +599,42 @@ mod tests {
         // ================================================
 
         // 3. GOAL: JL projection
+        let nd = size_n * d;
+        // generate gaussian distribution matrix
+        // TODO: should from verifier
+        let gaussian_distribution_matrix = generate_gaussian_distribution(nd);
+        println!("gaussian_distribution_matrix: {:?}", gaussian_distribution_matrix);
         // 3.1 PI_i is randomly chosen from \Chi { -1, 0, 1 }^{256 * nd}
         //      (Using Guassian Distribution)
-        // 3.2 caculate p_j = sum(<pi_i^(j)>, s_i) for all i-r
+
+        // 3.2 caculate p_j = sum(<pi_i^(j), s_i>) for all i-r
+        /*
+            - pi^(j) is the j-th row of gaussian_distribution_matrix, j = 1..256
+            - concat s_i's coefficients, output a vector with length nd
+            - <pi_i^(j), s_i> = pi_i^(j)[0] * s_i[0] + pi_i^(j)[1] * s_i[1] + ... + pi_i^(j)[nd-1] * s_i[nd-1], is the inner product of pi_i^(j) and s_i
+            - p_j = sum(<pi_i^(j), s_i>) for all i = 1..r, is a Zq
+            - vector p = [p_1, p_2, ..., p_256], is a vector with length 256(2λ), type Vec<Zq>
+        */
+        let mut p: Vec<usize> = Vec::with_capacity(256);
+        // concat all s_i's coefficients into a vector
+        // such as: s = [s_0, s_1]
+        // s_0: [PolynomialRing{coefficients: [1, 2, 3]}, PolynomialRing{coefficients: [4, 5, 6]}, PolynomialRing{coefficients: [7, 8, 9]}], output: ss_0 = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        // s_1: [PolynomialRing{coefficients: [1, 2, 3]}, PolynomialRing{coefficients: [4, 5, 6]}, PolynomialRing{coefficients: [7, 8, 9]}], output: ss_1 = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        // so ss = [ss_0, ss_1]
+        let s_coeffs: Vec<Vec<usize>> = s.iter()
+            .map(|s_i| s_i.iter().map(|s_i_poly| s_i_poly.coefficients.clone()).flatten().collect())
+            .collect();
+
+        println!("s_coeffs: {:?}", s_coeffs);
+        // implement p calculation, inner product each element of gaussian_distribution_matrix and each element of s_coeffs
+        for (g_row, s_row) in gaussian_distribution_matrix.iter().zip(s_coeffs.iter()) {
+            let inner_product: usize = g_row.iter().zip(s_row.iter()).map(|(a, b)| *a * *b as i32).sum::<i32>() as usize;
+            p.push(inner_product);
+        }
+        println!("p: {:?}", p);
+
+        // todo: send p to verifier(put in transcript)
+
         // 3.3 Verifier have to check: || p || <= \sqrt{128} * beta
 
         // ================================================
