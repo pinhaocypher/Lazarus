@@ -281,7 +281,9 @@ mod tests {
     #[test]
     fn test_setup_prover() {
         let lambda: usize = 128;
+        let double_lambda = lambda * 2;
         let q = 2usize.pow(32 as u32);
+        let log_q = 32;
         let d = 3; // todo: should be 64
         // s is a vector of size r. each s_i is a PolynomialRing(Rq) with n coefficients
         let s_len: usize = 3; // r: Number of witness elements
@@ -332,9 +334,9 @@ mod tests {
             b_values_k.push(b_i);
         }
         println!("b_values_k: {:?}", b_values_k);
-        let l: usize = 4; // Define L as usize
-                          // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
-                          // todo: aij == aji
+        let l: usize = 5; // Define L as usize
+        // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
+        // todo: aij == aji
         let a_l: Vec<Vec<usize>> = (0..s_len)
             .map(|_| (0..s_len).map(|_| rng.gen_range(1..l)).collect())
             .collect();
@@ -646,8 +648,20 @@ mod tests {
 
         // 4. GOAL: Aggregation
         // 4.1 psi^(k) is randomly chosen from Z_q^{L}
+        // k = 1..λ/log2^q
+        let k = lambda / log_q;
+        let psi_k = (0..k)
+            .map(|_| (0..l).map(|_| rng.gen_range(0..q)).collect())
+            .collect::<Vec<Vec<usize>>>();
+        assert_eq!(psi_k.len(), k);
+        assert_eq!(psi_k[0].len(), l);
+
         // 4.2 omega^(k) is randomly chosen from Z_q^{256}
         //      (Both using Guassian Distribution)
+        let omega_k = (0..k).map(|_| (0..double_lambda).map(|_| rng.gen_range(0..q)).collect()).collect::<Vec<Vec<usize>>>();
+        assert_eq!(omega_k.len(), k);
+        assert_eq!(omega_k[0].len(), double_lambda);
+
         // 4.3 caculate b^{''(k)}
         // 4.3.1 calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
         // 4.3.2 calculate phi_i^{''(k)} =
@@ -655,7 +669,7 @@ mod tests {
         //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
         // 4.3.3 calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>)
 
-        // Send b^{''(k)} to verifier
+        // Send b_0^{''(k)} to verifier
         // Verifier check: b_0^{''(k)} ?= <⟨omega^(k),p⟩> + sum(psi_l^(k) * b_0^{'(l)}) for all l = 1..L
 
         // ================================================
