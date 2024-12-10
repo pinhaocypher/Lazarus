@@ -954,8 +954,24 @@ mod tests {
         assert_eq!(phi_aggr[0].len(), size_r);
 
         // 4.3.3 calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>)
+        let b_aggr: Vec<PolynomialRing> = (0..size_k)
+            .map(|k| {
+                let a_constraint_ct_aggr_k = &a_constraint_ct_aggr[k];
+                let phi_aggr_k = &phi_aggr[k];
+                let mut sum = PolynomialRing { coefficients: vec![0; deg_bound_d] };
+                for i in 0..r {
+                    for j in i..r {
+                        sum = sum + &a_constraint_ct_aggr_k[i][j] * inner_product_polynomial_ring(&witness_s[i], &witness_s[j]);
+                    }
+                    sum = sum + inner_product_polynomial_ring(&phi_aggr_k[i], &witness_s[i]);
+                }
+                sum
+            })
+            .collect();
+        println!("b_aggr: {:?}", b_aggr);
+        assert_eq!(b_aggr.len(), size_k);
 
-        // Send b_0^{''(k)} to verifier
+        // Send b^{''(k)} to verifier
         // Verifier check: b_0^{''(k)} ?= <⟨omega^(k),p⟩> + sum(psi_l^(k) * b_0^{'(l)}) for all l = 1..L
 
         // ================================================
