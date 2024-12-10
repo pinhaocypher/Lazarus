@@ -147,8 +147,8 @@ fn inner_product_polynomial_ring(
 // Function to calculate b^(k)
 fn calculate_b_constraint(
     s: &Vec<Vec<PolynomialRing>>,
-    a: &Vec<Vec<usize>>,
-    phi: &Vec<usize>,
+    a_constraint: &Vec<Vec<PolynomialRing>>,
+    phi_constraint: &Vec<PolynomialRing>,
 ) -> PolynomialRing {
     let mut b: PolynomialRing = PolynomialRing {
         coefficients: vec![0],
@@ -158,24 +158,16 @@ fn calculate_b_constraint(
     for i in 0..s_len {
         for j in 0..s_len {
             // calculate inner product of s[i] and s[j], will retturn a single PolynomialRing
-            // Start of Selection
             let elem_s_i = &s[i];
             let elem_s_j = &s[j];
             // Calculate inner product and update b
             let inner_product_si_sj = inner_product_polynomial_ring(&elem_s_i, &elem_s_j);
-            b = b.add_polynomial_ring(&inner_product_si_sj.multiply_by_polynomial_ring(
-                &PolynomialRing {
-                    coefficients: vec![a[i][j]],
-                },
-            ));
+            b = b.add_polynomial_ring(&inner_product_si_sj.multiply_by_polynomial_ring(&a_constraint[i][j]));
         }
         // calculate inner product of s[i] and phi
-        // Start of Selection
         s[i].iter()
             .map(|elem| elem)
-            .zip(phi.iter().map(|x| PolynomialRing {
-                coefficients: vec![*x],
-            }))
+            .zip(phi_constraint.iter())
             .for_each(|(x, y)| b = b.add_polynomial_ring(&x.multiply_by_polynomial_ring(&y)));
     }
 
@@ -318,38 +310,77 @@ mod tests {
 
         let mut rng = rand::thread_rng();
         let k: usize = 6;
-        // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
+        // In DPCS(dot product constraint system), there are k constraints, each constraint has a, phi and b
+        // Generate random a^(k)_{i,j}: k length vector of matrix, matrix length is r x r, each element in matrix is a R_q
         // todo: aij == aji
-        let a_k: Vec<Vec<usize>> = (0..s_len)
-            .map(|_| (0..s_len).map(|_| rng.gen_range(1..k)).collect())
+        let a_constraint: Vec<Vec<Vec<PolynomialRing>>> = (0..k)
+            .map(|_| {
+                (0..s_len)
+                    .map(|_| {
+                        (0..s_len)
+                            .map(|_| PolynomialRing {
+                                coefficients: (0..size_n).map(|_| rng.gen_range(0..q)).collect(),
+                            })
+                            .collect()
+                    })
+                    .collect()
+            })
             .collect();
-        let phi_k: Vec<usize> = (0..s_len).map(|_| rng.gen_range(1..5)).collect();
-        println!("a_k: {:?}", a_k);
-        println!("phi_k: {:?}", phi_k);
+        // Generate random phi^(k)_{i}: vector(k length) of vector(n length), each element in vector is a R_q
+        let phi_constraint: Vec<Vec<PolynomialRing>> = (0..k)
+            .map(|_| (0..size_n)
+                .map(|_| PolynomialRing {
+                    coefficients: (0..size_n).map(|_| rng.gen_range(0..q)).collect(),
+                })
+                .collect()
+            )
+            .collect();
+        println!("a_constraint: {:?}", a_constraint);
+        println!("phi_constraint: {:?}", phi_constraint);
 
         // calculate b^(k)
-        let mut b_values_k = Vec::new();
-        for _ in 0..k {
-            let b_i = calculate_b_constraint(&s, &a_k, &phi_k);
-            b_values_k.push(b_i);
+        let mut b_constraint = Vec::new();
+        for k_i in 0..k {
+            let b_i = calculate_b_constraint(&s, &a_constraint[k_i], &phi_constraint[k_i]);
+            b_constraint.push(b_i);
         }
-        println!("b_values_k: {:?}", b_values_k);
-        let l: usize = 5; // Define L as usize
-        // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
+        println!("b_constraint: {:?}", b_constraint);
+
+        // In DPCS(dot product constraint system) for constant terms(ct), there are k constraints, each constraint has a, phi and b.
+        // Generate random a^(l)_{i,j}: l length vector of matrix, matrix length is r x r, each element in matrix is a R_q
         // todo: aij == aji
-        let a_l: Vec<Vec<usize>> = (0..s_len)
-            .map(|_| (0..s_len).map(|_| rng.gen_range(1..l)).collect())
+        let l: usize = 5; // Define L as usize
+        let a_constraint_ct: Vec<Vec<Vec<PolynomialRing>>> = (0..l)
+            .map(|_| {
+                (0..s_len)
+                    .map(|_| {
+                        (0..s_len)
+                            .map(|_| PolynomialRing {
+                                coefficients: (0..size_n).map(|_| rng.gen_range(0..q)).collect(),
+                            })
+                            .collect()
+                    })
+                    .collect()
+            })
             .collect();
-        println!("a_l: {:?}", a_l);
-        let phi_l: Vec<usize> = (0..s_len).map(|_| rng.gen_range(1..5)).collect();
+        println!("a_constraint_ct: {:?}", a_constraint_ct);
+        // Generate random phi^(k)_{i}, each element is a R_q^{n}
+        let phi_constraint_ct: Vec<Vec<PolynomialRing>> = (0..l)
+            .map(|_| (0..size_n)
+                .map(|_| PolynomialRing {
+                    coefficients: vec![rng.gen_range(1..5)],
+                })
+                .collect()
+            )
+            .collect();
         // calculate b^(l)
-        let mut b_values_l = Vec::new();
+        let mut b_constraint_ct = Vec::new();
         // todo: only need to keep constant term?
-        for _ in 0..l {
-            let b_i = calculate_b_constraint(&s, &a_l, &phi_l);
-            b_values_l.push(b_i);
+        for l_i  in 0..l {
+            let b_i = calculate_b_constraint(&s, &a_constraint_ct[l_i], &phi_constraint_ct[l_i]);
+            b_constraint_ct.push(b_i);
         }
-        println!("b_values_l: {:?}", b_values_l);
+        println!("b_constraint_ct: {:?}", b_constraint_ct);
         let size_kappa = 3; // Example size
         // let size_n = 5;
         // A: matrix size: kappa * n, each element is PolynomialRing(Rq)
