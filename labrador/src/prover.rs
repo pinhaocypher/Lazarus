@@ -856,26 +856,29 @@ mod tests {
 
         // 4.3 caculate b^{''(k)}
         // 4.3.1 calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
-        // a_l, phi_l
-        // for k from 1 to L
-        // calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
-        let aggregated_a_l: Vec<usize> = (0..k)
-            .map(|k_i| {
-                let psi_ki = &psi_k[k_i];
-                    // Start of Selection
-                    let mut sum = 0;
-                    for l_i in 0..l {
-                        let psi_ki_l = psi_ki[l_i];
-                        for i in 0..r {
-                            for j in i..r {
-                                sum += a_l[i][j] * psi_ki_l;
-                            }
+        let a_constraint_ct_aggr: Vec<Vec<Vec<PolynomialRing>>> = (0..size_k)
+            .map(|k| {
+                let mut a_constraint_ct_aggr_k: Vec<Vec<PolynomialRing>> = vec![vec![PolynomialRing { coefficients: vec![0; deg_bound_d] }; size_r]; size_r];
+                let psi_k = &psi_challenge[k];
+                let mut sum = PolynomialRing {
+                    coefficients: vec![0; deg_bound_d],
+                };
+                for i in 0..r {
+                    for j in i..r {
+                        for l in 0..size_l {
+                            let psi_k_l = psi_k[l];
+                            sum = sum + &a_constraint_ct[l][i][j] * psi_k_l;
+                        }
+                        a_constraint_ct_aggr_k[i][j] = sum.clone();
+                    }
                 }
-            }
-            sum
-        }).collect();
-        println!("aggregated_a_l: {:?}", aggregated_a_l);
-        assert_eq!(aggregated_a_l.len(), k);
+                a_constraint_ct_aggr_k
+            })
+            .collect();
+        println!("a_constraint_ct_aggr: {:?}", a_constraint_ct_aggr);
+        assert_eq!(a_constraint_ct_aggr.len(), size_k);
+        assert_eq!(a_constraint_ct_aggr[0].len(), size_r);
+        assert_eq!(a_constraint_ct_aggr[0][0].len(), size_r);
         // 4.3.2 calculate phi_i^{''(k)} =
         //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
         //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
