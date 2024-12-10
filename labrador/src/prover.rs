@@ -796,10 +796,16 @@ mod tests {
 
         // 3. GOAL: JL projection
         let nd = size_n * deg_bound_d;
-        // generate gaussian distribution matrix
+        // generate gaussian distribution matrices
+        // there are size_r matrices, each matrix size is 256 * nd
         // TODO: should from verifier
-        let gaussian_distribution_matrix = generate_gaussian_distribution(nd, q);
-        println!("gaussian_distribution_matrix: {:?}", gaussian_distribution_matrix);
+        let gaussian_distribution_matrices = (0..size_r)
+            .map(|_| generate_gaussian_distribution(nd, q))
+            .collect::<Vec<Vec<Vec<usize>>>>();
+        println!("gaussian_distribution_matrices: {:?}", gaussian_distribution_matrices);
+        assert_eq!(gaussian_distribution_matrices.len(), size_r);
+        assert_eq!(gaussian_distribution_matrices[0].len(), double_lambda);
+        assert_eq!(gaussian_distribution_matrices[0][0].len(), nd);
         // 3.1 PI_i is randomly chosen from \Chi { -1, 0, 1 }^{256 * nd}
         //      (Using Guassian Distribution)
 
@@ -820,20 +826,25 @@ mod tests {
         let s_coeffs: Vec<Vec<usize>> = witness_s.iter()
             .map(|s_i| s_i.iter().map(|s_i_poly| s_i_poly.coefficients.clone()).flatten().collect())
             .collect();
-
+        assert_eq!(s_coeffs.len(), size_r);
+        assert_eq!(s_coeffs[0].len(), nd);
         println!("s_coeffs: {:?}", s_coeffs);
-        // implement p calculation, inner product each element of gaussian_distribution_matrix and each element of s_coeffs
-        let mut p: Vec<usize> = Vec::with_capacity(256);
-        for g_row in gaussian_distribution_matrix.iter() {
-            println!("g_row: {:?}", g_row);
-            let mut sum = 0;
-            for s_row in s_coeffs.iter() {
-                sum += g_row.iter().zip(s_row.iter()).map(|(a, b)| *a * *b).sum::<usize>();
-            }
+        // implement p calculation, inner product of gaussian_distribution_matrices and s_coeffs
+        let mut p: Vec<usize> = Vec::with_capacity(double_lambda);
+            // Start of Selection
+            for j in 0..double_lambda {
+                let mut sum = 0;
+                for i in 0..size_r {
+                    sum += gaussian_distribution_matrices[i][j]
+                        .iter()
+                        .zip(s_coeffs[i].iter())
+                        .map(|(a, b)| a * b)
+                        .sum::<usize>();
+                }
             p.push(sum);
         }
         println!("p: {:?}", p);
-        assert_eq!(p.len(), 256);
+        assert_eq!(p.len(), double_lambda);
         // todo: send p to verifier(put in transcript)
 
         // 3.3 Verifier have to check: || p || <= \sqrt{128} * beta
