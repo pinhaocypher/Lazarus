@@ -511,8 +511,8 @@ mod tests {
         // In DPCS(dot product constraint system) for constant terms(ct), there are k constraints, each constraint has a, phi and b.
         // Generate random a^(l)_{i,j}: l length vector of matrix, matrix length is r x r, each element in matrix is a R_q
         // todo: aij == aji
-        let l: usize = 5; // Define L as usize
-        let a_constraint_ct: Vec<Vec<Vec<PolynomialRing>>> = (0..l)
+        let size_l: usize = 5; // Define L as usize
+        let a_constraint_ct: Vec<Vec<Vec<PolynomialRing>>> = (0..size_l)
             .map(|_| {
                 (0..size_r)
                     .map(|_| {
@@ -527,7 +527,7 @@ mod tests {
             .collect();
         println!("a_constraint_ct: {:?}", a_constraint_ct);
         // Generate random phi^(k)_{i}, each element is a R_q^{n}
-        let phi_constraint_ct: Vec<Vec<PolynomialRing>> = (0..l)
+        let phi_constraint_ct: Vec<Vec<PolynomialRing>> = (0..size_l)
             .map(|_| (0..size_n)
                 .map(|_| PolynomialRing {
                     coefficients: vec![rng.gen_range(1..5)],
@@ -537,7 +537,7 @@ mod tests {
             .collect();
         // calculate b^(l)
         // todo: only need to keep constant term?
-        let b_constraint_ct: Vec<PolynomialRing> = (0..l)
+        let b_constraint_ct: Vec<PolynomialRing> = (0..size_l)
             .map(|l_i| calculate_b_constraint(&witness_s, &a_constraint_ct[l_i], &phi_constraint_ct[l_i]))
             .collect();
         println!("b_constraint_ct: {:?}", b_constraint_ct);
@@ -845,14 +845,14 @@ mod tests {
         let psi_challenge = (0..size_k)
             .map(|_| (0..size_l).map(|_| rng.gen_range(0..10)).collect())
             .collect::<Vec<Vec<usize>>>();
-        assert_eq!(psi_k.len(), size_k);
-        assert_eq!(psi_k[0].len(), l);
+        assert_eq!(psi_challenge.len(), size_k);
+        assert_eq!(psi_challenge[0].len(), size_l);
 
         // 4.2 omega^(k) is randomly chosen from Z_q^{256}
         //      (Both using Guassian Distribution)
-        let omega_k = (0..size_k).map(|_| (0..double_lambda).map(|_| rng.gen_range(0..q)).collect()).collect::<Vec<Vec<usize>>>();
-        assert_eq!(omega_k.len(), size_k);
-        assert_eq!(omega_k[0].len(), double_lambda);
+        let omega_challenge = (0..size_k).map(|_| (0..double_lambda).map(|_| rng.gen_range(0..10)).collect()).collect::<Vec<Vec<usize>>>();
+        assert_eq!(omega_challenge.len(), size_k);
+        assert_eq!(omega_challenge[0].len(), double_lambda);
 
         // 4.3 caculate b^{''(k)}
         // 4.3.1 calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
