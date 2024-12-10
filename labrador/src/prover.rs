@@ -944,9 +944,15 @@ mod tests {
             ],
         ];
         let k: usize = 6;
-        let a_k: Vec<Vec<usize>> = (0..r).map(|_| (0..r).map(|r_i| r_i).collect()).collect();
-        let phi_k: Vec<usize> = (0..r).map(|r_i| r_i).collect();
-        let b_k = calculate_b_constraint(&s, &a_k, &phi_k);
+        let a_constraint: Vec<Vec<PolynomialRing>> = (0..k).map(|_| {
+            (0..r).map(|r_i| PolynomialRing {
+                coefficients: vec![r_i],
+            }).collect()
+        }).collect();
+        let phi_constraint: Vec<PolynomialRing> = (0..r).map(|r_i| PolynomialRing {
+            coefficients: vec![r_i],
+        }).collect();
+        let b_k = calculate_b_constraint(&s, &a_constraint, &phi_constraint);
         println!("b_k: {:?}", b_k);
         // assert_eq!(b_k, 1983);
     }
