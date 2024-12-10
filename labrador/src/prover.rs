@@ -312,7 +312,7 @@ fn inner_product_polynomial_ring(
 fn calculate_b_constraint(
     s: &Vec<Vec<PolynomialRing>>,
     a_constraint: &Vec<Vec<PolynomialRing>>,
-    phi_constraint: &Vec<PolynomialRing>,
+    phi_constraint: &Vec<Vec<PolynomialRing>>,
 ) -> PolynomialRing {
     let mut b: PolynomialRing = PolynomialRing {
         coefficients: vec![0],
@@ -331,7 +331,7 @@ fn calculate_b_constraint(
         // calculate inner product of s[i] and phi
         s[i].iter()
             .map(|elem| elem)
-            .zip(phi_constraint.iter())
+            .zip(phi_constraint[i].iter())
             .for_each(|(x, y)| b = b.add_polynomial_ring(&x.multiply_by_polynomial_ring(&y)));
     }
 
@@ -485,24 +485,35 @@ mod tests {
                     .map(|_| {
                         (0..size_r)
                             .map(|_| PolynomialRing {
-                                coefficients: (0..size_n).map(|_| rng.gen_range(0..10)).collect(),
+                                coefficients: (0..deg_bound_d).map(|_| rng.gen_range(0..10)).collect(),
                             })
                             .collect()
                     })
                     .collect()
             })
             .collect();
-        // Generate random phi^(k)_{i}: vector(k length) of vector(n length), each element in vector is a R_q
-        let phi_constraint: Vec<Vec<PolynomialRing>> = (0..constraint_num_k)
-            .map(|_| (0..size_n)
-                .map(|_| PolynomialRing {
-                    coefficients: (0..size_n).map(|_| rng.gen_range(0..10)).collect(),
-                })
-                .collect()
-            )
-            .collect();
         println!("a_constraint: {:?}", a_constraint);
+        assert_eq!(a_constraint.len(), constraint_num_k);
+        assert_eq!(a_constraint[0].len(), size_r);
+        assert_eq!(a_constraint[0][0].len(), size_r);
+        // Generate random phi^(k)_{i}: k length vector of matrix, matrix length is r x n, each element in matrix is a R_q
+        let phi_constraint: Vec<Vec<Vec<PolynomialRing>>> = (0..constraint_num_k)
+            .map(|_| {
+                (0..size_r)
+                    .map(|_| {
+                        (0..size_n)
+                            .map(|_| PolynomialRing {
+                                coefficients: (0..deg_bound_d).map(|_| rng.gen_range(0..10)).collect(),
+                            })
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect();
         println!("phi_constraint: {:?}", phi_constraint);
+        assert_eq!(phi_constraint.len(), constraint_num_k);
+        assert_eq!(phi_constraint[0].len(), size_r);
+        assert_eq!(phi_constraint[0][0].len(), size_n);
 
         // calculate b^(k)
         let b_constraint: Vec<PolynomialRing> = (0..constraint_num_k)
@@ -528,19 +539,29 @@ mod tests {
             })
             .collect();
         println!("a_constraint_ct: {:?}", a_constraint_ct);
-        // Generate random phi^(k)_{i}, each element is a R_q^{n}
-        let phi_constraint_ct: Vec<Vec<PolynomialRing>> = (0..size_l)
-            .map(|_| (0..size_n)
-                .map(|_| PolynomialRing {
-                    coefficients: vec![rng.gen_range(1..5)],
-                })
-                .collect()
-            )
+        // Generate random phi^(k)_{i}: k length vector of matrix, matrix length is r x n, each element in matrix is a R_q
+        let phi_constraint_ct: Vec<Vec<Vec<PolynomialRing>>> = (0..constraint_num_k)
+            .map(|_| {
+                (0..size_r)
+                    .map(|_| {
+                        (0..size_n)
+                            .map(|_| PolynomialRing {
+                                coefficients: (0..deg_bound_d).map(|_| rng.gen_range(0..10)).collect(),
+                            })
+                            .collect()
+                    })
+                    .collect()
+            })
             .collect();
+        println!("phi_constraint: {:?}", phi_constraint);
+        assert_eq!(phi_constraint.len(), constraint_num_k);
+        assert_eq!(phi_constraint[0].len(), size_r);
+        assert_eq!(phi_constraint[0][0].len(), size_n);
+
         // calculate b^(l)
         // todo: only need to keep constant term?
         let b_constraint_ct: Vec<PolynomialRing> = (0..size_l)
-            .map(|l_i| calculate_b_constraint(&witness_s, &a_constraint_ct[l_i], &phi_constraint_ct[l_i]))
+            .map(|l| calculate_b_constraint(&witness_s, &a_constraint_ct[l], &phi_constraint_ct[l]))
             .collect();
         println!("b_constraint_ct: {:?}", b_constraint_ct);
 
@@ -895,18 +916,22 @@ mod tests {
         // 4.3.2 calculate phi_i^{''(k)} =
         //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
         //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
-        let phi_aggr: Vec<Vec<PolynomialRing>> = (0..size_k)
+        let phi_aggr: Vec<Vec<Vec<PolynomialRing>>> = (0..size_k)
             .map(|k| {
                 let psi_k = &psi_challenge[k];
-                let mut phi_aggr_k: Vec<PolynomialRing> = vec![PolynomialRing { coefficients: vec![0; deg_bound_d] }; size_r];
+                let mut phi_aggr_k: Vec<Vec<PolynomialRing>> = vec![vec![PolynomialRing { coefficients: vec![0; deg_bound_d] }; size_n]; size_r];
                 // sum part 1 and part 2 to get a polynomial ring
-                let mut sum = PolynomialRing { coefficients: vec![0; deg_bound_d] };
+                let mut sum: Vec<PolynomialRing> = vec![PolynomialRing { coefficients: vec![0; deg_bound_d] }; size_n];
                 for i in 0..r {
                     // part 1: sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
                     for l in 0..size_l {
                         let psi_k_l = psi_k[l];
                         let phi_constraint_l_i = &phi_constraint_ct[l][i];
-                        sum = sum + phi_constraint_l_i * psi_k_l;
+                        let product = phi_constraint_l_i.iter()
+                            .map(|p| p * psi_k_l)
+                            .collect::<Vec<PolynomialRing>>();
+                            // Start of Selection
+                            sum = sum.iter().zip(product.iter()).map(|(a, b)| a + b).collect();
                     }
                     // part 2: sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
                     for j in 0..double_lambda {
@@ -915,7 +940,9 @@ mod tests {
                         let sigma_neg_1_pai = PolynomialRing {
                             coefficients: gaussian_distribution_matrices[i][j].iter().rev().cloned().collect(),
                         };
-                        sum = sum + sigma_neg_1_pai * omega_k_j;
+                        let product = sigma_neg_1_pai * omega_k_j;
+                        // each item in sum add product
+                        sum = sum.iter().map(|s| s + &product).collect();
                     }
                     phi_aggr_k[i] = sum.clone();
                 }
@@ -990,14 +1017,16 @@ mod tests {
                 },
             ],
         ];
-        let k: usize = 6;
-        let a_constraint: Vec<Vec<PolynomialRing>> = (0..k).map(|_| {
+        let n = 4;
+        let a_constraint: Vec<Vec<PolynomialRing>> = (0..r).map(|_| {
             (0..r).map(|r_i| PolynomialRing {
                 coefficients: vec![r_i],
             }).collect()
         }).collect();
-        let phi_constraint: Vec<PolynomialRing> = (0..r).map(|r_i| PolynomialRing {
-            coefficients: vec![r_i],
+        let phi_constraint: Vec<Vec<PolynomialRing>> = (0..r).map(|_| {
+            (0..n).map(|n_i| PolynomialRing {
+                coefficients: vec![n_i],
+            }).collect()
         }).collect();
         let b_k = calculate_b_constraint(&s, &a_constraint, &phi_constraint);
         println!("b_k: {:?}", b_k);
