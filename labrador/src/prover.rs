@@ -473,11 +473,11 @@ mod tests {
         );
 
         let mut rng = rand::thread_rng();
-        let k: usize = 6;
+        let constraint_num_k: usize = 6;
         // In DPCS(dot product constraint system), there are k constraints, each constraint has a, phi and b
         // Generate random a^(k)_{i,j}: k length vector of matrix, matrix length is r x r, each element in matrix is a R_q
         // todo: aij == aji
-        let a_constraint: Vec<Vec<Vec<PolynomialRing>>> = (0..k)
+        let a_constraint: Vec<Vec<Vec<PolynomialRing>>> = (0..constraint_num_k)
             .map(|_| {
                 (0..size_r)
                     .map(|_| {
@@ -491,7 +491,7 @@ mod tests {
             })
             .collect();
         // Generate random phi^(k)_{i}: vector(k length) of vector(n length), each element in vector is a R_q
-        let phi_constraint: Vec<Vec<PolynomialRing>> = (0..k)
+        let phi_constraint: Vec<Vec<PolynomialRing>> = (0..constraint_num_k)
             .map(|_| (0..size_n)
                 .map(|_| PolynomialRing {
                     coefficients: (0..size_n).map(|_| rng.gen_range(0..10)).collect(),
@@ -503,7 +503,7 @@ mod tests {
         println!("phi_constraint: {:?}", phi_constraint);
 
         // calculate b^(k)
-        let b_constraint: Vec<PolynomialRing> = (0..k)
+        let b_constraint: Vec<PolynomialRing> = (0..constraint_num_k)
             .map(|k_i| calculate_b_constraint(&witness_s, &a_constraint[k_i], &phi_constraint[k_i]))
             .collect();
         println!("b_constraint: {:?}", b_constraint);
