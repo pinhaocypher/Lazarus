@@ -895,43 +895,37 @@ mod tests {
         // 4.3.2 calculate phi_i^{''(k)} =
         //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
         //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
-        // part 1: sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
         let phi_aggr: Vec<Vec<PolynomialRing>> = (0..size_k)
-                .map(|k| {
-                    let psi_k = &psi_challenge[k];
-                    let mut phi_aggr_k: Vec<PolynomialRing> = vec![PolynomialRing { coefficients: vec![0; deg_bound_d] }; size_r];
-                    let mut sum = PolynomialRing { coefficients: vec![0; deg_bound_d] };
-                    for i in 0..r {
-                        for l in 0..size_l {
-                            let psi_k_l = psi_k[l];
-                            let phi_l = &phi_constraint_ct[l];
-                            sum = sum + &phi_l[i] * psi_k_l;
-                        }
-                        phi_aggr_k[i] = sum.clone();
+            .map(|k| {
+                let psi_k = &psi_challenge[k];
+                let mut phi_aggr_k: Vec<PolynomialRing> = vec![PolynomialRing { coefficients: vec![0; deg_bound_d] }; size_r];
+                // sum part 1 and part 2 to get a polynomial ring
+                let mut sum = PolynomialRing { coefficients: vec![0; deg_bound_d] };
+                for i in 0..r {
+                    // part 1: sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
+                    for l in 0..size_l {
+                        let psi_k_l = psi_k[l];
+                        let phi_constraint_l_i = &phi_constraint_ct[l][i];
+                        sum = sum + phi_constraint_l_i * psi_k_l;
+                    }
+                    // part 2: sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
+                    for j in 0..double_lambda {
+                        let omega_k_j = omega_challenge[k][j];
+                        // todo: to be checked, we just reverse the vector from gaussian_distribution_matries
+                        let sigma_neg_1_pai = PolynomialRing {
+                            coefficients: gaussian_distribution_matrices[i][j].iter().rev().cloned().collect(),
+                        };
+                        sum = sum + sigma_neg_1_pai * omega_k_j;
+                    }
+                    phi_aggr_k[i] = sum.clone();
                 }
                 phi_aggr_k
             })
             .collect();
         println!("phi_aggr: {:?}", phi_aggr);
         assert_eq!(phi_aggr.len(), size_k);
-        // part 2: sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
-        // sigma_{-1} * pi_i^{j))
-        let pai_aggr: Vec<PolynomialRing> = (0..size_k)
-        .map(|k| {
-            let mut sum = PolynomialRing { coefficients: vec![0; deg_bound_d] };
-            for j in 0..double_lambda {
-                let omega_k_j = omega_challenge[k][j];
-                // todo: to be checked, we just reverse the vector from gaussian_distribution_matrix
-                let sigma_neg_1_pai = PolynomialRing {
-                    coefficients: gaussian_distribution_matrix[j].iter().rev().cloned().collect(),
-                };
-                sum = sum + sigma_neg_1_pai * omega_k_j;
-            }
-            sum
-            })
-            .collect();
-        println!("pai_aggr: {:?}", pai_aggr);
-        assert_eq!(pai_aggr.len(), size_k);
+        assert_eq!(phi_aggr[0].len(), size_r);
+
         // 4.3.3 calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>)
 
         // Send b_0^{''(k)} to verifier
