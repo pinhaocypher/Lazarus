@@ -506,14 +506,14 @@ mod tests {
 
         // calculate b^(k)
         let b_constraint: Vec<PolynomialRing> = (0..constraint_num_k)
-            .map(|k_i| calculate_b_constraint(&witness_s, &a_constraint[k_i], &phi_constraint[k_i]))
+            .map(|k| calculate_b_constraint(&witness_s, &a_constraint[k], &phi_constraint[k]))
             .collect();
         println!("b_constraint: {:?}", b_constraint);
 
         // In DPCS(dot product constraint system) for constant terms(ct), there are k constraints, each constraint has a, phi and b.
         // Generate random a^(l)_{i,j}: l length vector of matrix, matrix length is r x r, each element in matrix is a R_q
         // todo: aij == aji
-        let size_l: usize = 5; // Define L as usize
+        let size_l: usize = 5; // Define L
         let a_constraint_ct: Vec<Vec<Vec<PolynomialRing>>> = (0..size_l)
             .map(|_| {
                 (0..size_r)
@@ -885,25 +885,42 @@ mod tests {
         //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
         //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
         // part 1: sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
-        let phi_l_aggr: Vec<Vec<PolynomialRing>> = (0..size_k)
+        let phi_aggr: Vec<Vec<PolynomialRing>> = (0..size_k)
                 .map(|k| {
                     let psi_k = &psi_challenge[k];
-                    let mut aggregated_phi_l_k: Vec<PolynomialRing> = vec![PolynomialRing { coefficients: vec![0; deg_bound_d] }; size_r];
+                    let mut phi_aggr_k: Vec<PolynomialRing> = vec![PolynomialRing { coefficients: vec![0; deg_bound_d] }; size_r];
                     let mut sum = PolynomialRing { coefficients: vec![0; deg_bound_d] };
                     for i in 0..r {
                         for l in 0..size_l {
                             let psi_k_l = psi_k[l];
                             let phi_l = &phi_constraint_ct[l];
-                                // Start of Selection
-                                sum = sum + &phi_l[i] * psi_k_l;
+                            sum = sum + &phi_l[i] * psi_k_l;
                         }
-                        aggregated_phi_l_k[i] = sum.clone();
+                        phi_aggr_k[i] = sum.clone();
                 }
-                aggregated_phi_l_k
+                phi_aggr_k
             })
             .collect();
-        println!("phi_l_aggr: {:?}", phi_l_aggr);
-        assert_eq!(phi_l_aggr.len(), size_k);
+        println!("phi_aggr: {:?}", phi_aggr);
+        assert_eq!(phi_aggr.len(), size_k);
+        // part 2: sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
+        // sigma_{-1} * pi_i^{j))
+        let pai_aggr: Vec<PolynomialRing> = (0..size_k)
+        .map(|k| {
+            let mut sum = PolynomialRing { coefficients: vec![0; deg_bound_d] };
+            for j in 0..double_lambda {
+                let omega_k_j = omega_challenge[k][j];
+                // todo: to be checked, we just reverse the vector from gaussian_distribution_matrix
+                let sigma_neg_1_pai = PolynomialRing {
+                    coefficients: gaussian_distribution_matrix[j].iter().rev().cloned().collect(),
+                };
+                sum = sum + sigma_neg_1_pai * omega_k_j;
+            }
+            sum
+            })
+            .collect();
+        println!("pai_aggr: {:?}", pai_aggr);
+        assert_eq!(pai_aggr.len(), size_k);
         // 4.3.3 calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>)
 
         // Send b_0^{''(k)} to verifier
