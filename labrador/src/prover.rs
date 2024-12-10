@@ -1,5 +1,7 @@
 use profiler_macro::time_profiler;
 use rand::Rng;
+use std::ops::Mul;
+use std::ops::Add;
 
 pub fn setup() {
     // 0. setup
@@ -128,6 +130,168 @@ impl PolynomialRing {
         }
     }
 }
+
+impl Mul for PolynomialRing {
+    type Output = PolynomialRing;
+
+    fn mul(self, other: PolynomialRing) -> PolynomialRing {
+        self.multiply_by_polynomial_ring(&other)
+    }
+}
+
+impl Mul<&PolynomialRing> for PolynomialRing {
+    type Output = PolynomialRing;
+
+    fn mul(self, other: &PolynomialRing) -> PolynomialRing {
+        self.multiply_by_polynomial_ring(other)
+    }
+}
+
+impl Mul<PolynomialRing> for &PolynomialRing {
+    type Output = PolynomialRing;
+
+    fn mul(self, other: PolynomialRing) -> PolynomialRing {
+        self.multiply_by_polynomial_ring(&other)
+    }
+}
+
+impl Mul<&PolynomialRing> for &PolynomialRing {
+    type Output = PolynomialRing;
+
+    fn mul(self, other: &PolynomialRing) -> PolynomialRing {
+        self.multiply_by_polynomial_ring(other)
+    }
+}
+
+    // Start Generation Here
+    impl Mul<usize> for PolynomialRing {
+        type Output = PolynomialRing;
+
+        fn mul(self, other: usize) -> PolynomialRing {
+            let new_coefficients = self
+                .coefficients
+                .iter()
+                .map(|c| c * other)
+                .collect();
+            PolynomialRing {
+                coefficients: new_coefficients,
+            }
+        }
+    }
+
+    impl Mul<usize> for &PolynomialRing {
+        type Output = PolynomialRing;
+
+        fn mul(self, other: usize) -> PolynomialRing {
+            let new_coefficients = self
+                .coefficients
+                .iter()
+                .map(|c| c * other)
+                .collect();
+            PolynomialRing {
+                coefficients: new_coefficients,
+            }
+        }
+    }
+
+
+impl Add for PolynomialRing {
+    type Output = PolynomialRing;
+
+    fn add(self, other: PolynomialRing) -> PolynomialRing {
+        self.add_polynomial_ring(&other)
+    }
+}
+
+impl Add<&PolynomialRing> for PolynomialRing {
+    type Output = PolynomialRing;
+
+    fn add(self, other: &PolynomialRing) -> PolynomialRing {
+        self.add_polynomial_ring(other)
+    }
+}
+
+impl Add<PolynomialRing> for &PolynomialRing {
+    type Output = PolynomialRing;
+
+    fn add(self, other: PolynomialRing) -> PolynomialRing {
+        self.add_polynomial_ring(&other)
+    }
+}
+
+impl Add<&PolynomialRing> for &PolynomialRing {
+    type Output = PolynomialRing;
+
+    fn add(self, other: &PolynomialRing) -> PolynomialRing {
+        self.add_polynomial_ring(other)
+    }
+}
+
+impl Add<usize> for PolynomialRing {
+    type Output = PolynomialRing;
+
+    fn add(self, other: usize) -> PolynomialRing {
+        let mut new_coefficients = self.coefficients.clone();
+        if let Some(first) = new_coefficients.get_mut(0) {
+            *first += other;
+        } else {
+            new_coefficients.push(other);
+        }
+        PolynomialRing {
+            coefficients: new_coefficients,
+        }
+    }
+}
+
+impl Add<&usize> for PolynomialRing {
+    type Output = PolynomialRing;
+
+    fn add(self, other: &usize) -> PolynomialRing {
+        let mut new_coefficients = self.coefficients.clone();
+        if let Some(first) = new_coefficients.get_mut(0) {
+            *first += *other;
+        } else {
+            new_coefficients.push(*other);
+        }
+        PolynomialRing {
+            coefficients: new_coefficients,
+        }
+    }
+}
+
+impl Add<usize> for &PolynomialRing {
+    type Output = PolynomialRing;
+
+    fn add(self, other: usize) -> PolynomialRing {
+        let mut new_coefficients = self.coefficients.clone();
+        if let Some(first) = new_coefficients.get_mut(0) {
+            *first += other;
+        } else {
+            new_coefficients.push(other);
+        }
+        PolynomialRing {
+            coefficients: new_coefficients,
+        }
+    }
+}
+
+impl Add<&usize> for &PolynomialRing {
+    type Output = PolynomialRing;
+
+    fn add(self, other: &usize) -> PolynomialRing {
+        let mut new_coefficients = self.coefficients.clone();
+        if let Some(first) = new_coefficients.get_mut(0) {
+            *first += *other;
+        } else {
+            new_coefficients.push(*other);
+        }
+        PolynomialRing {
+            coefficients: new_coefficients,
+        }
+    }
+}
+
+
 
 // inner product of 2 vectors of PolynomialRing
 // Start of Selection
@@ -915,5 +1079,20 @@ mod tests {
         assert_eq!(matrix[1].len(), nd);
         assert!(matrix.iter().all(|row| row.iter().all(|&val| val == -1 || val == 0 || val == 1)));
 
+    }
+
+    // add test for polynomial addition and multiplication with overload
+    #[test]
+    fn test_polynomial_addition_and_multiplication() {
+        let a = PolynomialRing {
+            coefficients: vec![1, 2, 3],
+        };
+        let b = PolynomialRing {
+            coefficients: vec![4, 5, 6],
+        };
+        let c = &a + &b;
+        assert_eq!(c.coefficients, vec![5, 7, 9]);
+        let d = &a * &b;
+        assert_eq!(d.coefficients, vec![4, 13, 28, 27, 18]);
     }
 }
