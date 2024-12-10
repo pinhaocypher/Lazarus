@@ -409,7 +409,7 @@ fn ring_polynomial_to_basis(poly: &PolynomialRing, basis: usize, digits: usize) 
         .collect()
 }
 
-fn generate_gaussian_distribution(nd: usize) -> Vec<Vec<i32>> {
+fn generate_gaussian_distribution(nd: usize, q: usize) -> Vec<Vec<usize>> {
     let mut rng = rand::thread_rng();
     let mut matrix = vec![vec![0; nd]; 256]; // Initialize a 256 x nd matrix
 
@@ -417,7 +417,7 @@ fn generate_gaussian_distribution(nd: usize) -> Vec<Vec<i32>> {
         for j in 0..nd {
             let random_value: f32 = rng.gen(); // Generate a random float between 0 and 1
             matrix[i][j] = if random_value < 0.25 {
-                -1 // 1/4 probability
+                q-1 // 1/4 probability
             } else if random_value < 0.75 {
                 0 // 1/2 probability
             } else {
@@ -798,7 +798,7 @@ mod tests {
         let nd = size_n * deg_bound_d;
         // generate gaussian distribution matrix
         // TODO: should from verifier
-        let gaussian_distribution_matrix = generate_gaussian_distribution(nd);
+        let gaussian_distribution_matrix = generate_gaussian_distribution(nd, q);
         println!("gaussian_distribution_matrix: {:?}", gaussian_distribution_matrix);
         // 3.1 PI_i is randomly chosen from \Chi { -1, 0, 1 }^{256 * nd}
         //      (Using Guassian Distribution)
@@ -828,9 +828,9 @@ mod tests {
             println!("g_row: {:?}", g_row);
             let mut sum = 0;
             for s_row in s_coeffs.iter() {
-                sum += g_row.iter().zip(s_row.iter()).map(|(a, b)| *a * *b as i32).sum::<i32>();
+                sum += g_row.iter().zip(s_row.iter()).map(|(a, b)| *a * *b).sum::<usize>();
             }
-            p.push(sum as usize);
+            p.push(sum);
         }
         println!("p: {:?}", p);
         assert_eq!(p.len(), 256);
@@ -1102,13 +1102,14 @@ mod tests {
 
     #[test]
     fn test_generate_gaussian_distribution() {
+        let q = 2usize.pow(32 as u32);
         let nd = 10;
-        let matrix = generate_gaussian_distribution(nd);
+        let matrix = generate_gaussian_distribution(nd, q);
         println!("matrix: {:?}", matrix);
         assert_eq!(matrix.len(), 256);
         assert_eq!(matrix[0].len(), nd);
         assert_eq!(matrix[1].len(), nd);
-        assert!(matrix.iter().all(|row| row.iter().all(|&val| val == -1 || val == 0 || val == 1)));
+        assert!(matrix.iter().all(|row| row.iter().all(|&val| val == q-1 || val == 0 || val == 1)));
 
     }
 
