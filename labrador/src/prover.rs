@@ -432,6 +432,8 @@ fn generate_gaussian_distribution(nd: usize) -> Vec<Vec<i32>> {
 // create test case for setup
 #[cfg(test)]
 mod tests {
+    use std::vec;
+
     use super::*;
 
     #[test]
@@ -882,6 +884,26 @@ mod tests {
         // 4.3.2 calculate phi_i^{''(k)} =
         //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
         //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
+        // part 1: sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
+        let phi_l_aggr: Vec<Vec<PolynomialRing>> = (0..size_k)
+                .map(|k| {
+                    let psi_k = &psi_challenge[k];
+                    let mut aggregated_phi_l_k: Vec<PolynomialRing> = vec![PolynomialRing { coefficients: vec![0; deg_bound_d] }; size_r];
+                    let mut sum = PolynomialRing { coefficients: vec![0; deg_bound_d] };
+                    for i in 0..r {
+                        for l in 0..size_l {
+                            let psi_k_l = psi_k[l];
+                            let phi_l = &phi_constraint_ct[l];
+                                // Start of Selection
+                                sum = sum + &phi_l[i] * psi_k_l;
+                        }
+                        aggregated_phi_l_k[i] = sum.clone();
+                }
+                aggregated_phi_l_k
+            })
+            .collect();
+        println!("phi_l_aggr: {:?}", phi_l_aggr);
+        assert_eq!(phi_l_aggr.len(), size_k);
         // 4.3.3 calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>)
 
         // Send b_0^{''(k)} to verifier
