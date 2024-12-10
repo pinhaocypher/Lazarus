@@ -440,12 +440,12 @@ mod tests {
         let double_lambda = lambda * 2;
         let q = 2usize.pow(32 as u32);
         let log_q = 32;
-        let d = 3; // todo: should be 64
+        let deg_bound_d = 3; // todo: should be 64
         // s is a vector of size r. each s_i is a PolynomialRing(Rq) with n coefficients
-        let s_len: usize = 3; // r: Number of witness elements
+        let size_r: usize = 3; // r: Number of witness elements
         let size_n: usize = 5; // n
         let beta: usize = 50; // Example value for beta
-        let s: Vec<Vec<PolynomialRing>> = (1..=s_len)
+        let witness_s: Vec<Vec<PolynomialRing>> = (1..=size_r)
             .map(|i| {
                 (1..=size_n)
                     .map(|j| PolynomialRing {
@@ -454,10 +454,10 @@ mod tests {
                     .collect()
             })
             .collect();
-        println!("s: {:?}", s);
+        println!("s: {:?}", witness_s);
         // Calculate the sum of squared norms
         let mut sum_squared_norms = 0;
-        for vector in &s {
+        for vector in &witness_s {
             let norm_squared: usize = vector
                 .iter()
                 .map(|elem| elem.coefficients[0].pow(2)) // Calculate the square of each element
@@ -479,9 +479,9 @@ mod tests {
         // todo: aij == aji
         let a_constraint: Vec<Vec<Vec<PolynomialRing>>> = (0..k)
             .map(|_| {
-                (0..s_len)
+                (0..size_r)
                     .map(|_| {
-                        (0..s_len)
+                        (0..size_r)
                             .map(|_| PolynomialRing {
                                 coefficients: (0..size_n).map(|_| rng.gen_range(0..q)).collect(),
                             })
@@ -504,7 +504,7 @@ mod tests {
 
         // calculate b^(k)
         let b_constraint: Vec<PolynomialRing> = (0..k)
-            .map(|k_i| calculate_b_constraint(&s, &a_constraint[k_i], &phi_constraint[k_i]))
+            .map(|k_i| calculate_b_constraint(&witness_s, &a_constraint[k_i], &phi_constraint[k_i]))
             .collect();
         println!("b_constraint: {:?}", b_constraint);
 
@@ -514,9 +514,9 @@ mod tests {
         let l: usize = 5; // Define L as usize
         let a_constraint_ct: Vec<Vec<Vec<PolynomialRing>>> = (0..l)
             .map(|_| {
-                (0..s_len)
+                (0..size_r)
                     .map(|_| {
-                        (0..s_len)
+                        (0..size_r)
                             .map(|_| PolynomialRing {
                                 coefficients: (0..size_n).map(|_| rng.gen_range(0..q)).collect(),
                             })
@@ -538,7 +538,7 @@ mod tests {
         // calculate b^(l)
         // todo: only need to keep constant term?
         let b_constraint_ct: Vec<PolynomialRing> = (0..l)
-            .map(|l_i| calculate_b_constraint(&s, &a_constraint_ct[l_i], &phi_constraint_ct[l_i]))
+            .map(|l_i| calculate_b_constraint(&witness_s, &a_constraint_ct[l_i], &phi_constraint_ct[l_i]))
             .collect();
         println!("b_constraint_ct: {:?}", b_constraint_ct);
 
@@ -558,7 +558,7 @@ mod tests {
         assert!(a_matrix.values.len() == size_kappa);
         assert!(a_matrix.values[0].len() == size_n);
         let mut all_t_i = Vec::new();
-        for s_i in &s {
+        for s_i in &witness_s {
             let t_i = calculate_a_times_s_i(&a_matrix, &s_i);
             println!("size of t_i: {:?}", t_i.len());
             all_t_i.push(t_i);
@@ -640,7 +640,7 @@ mod tests {
         // 2.2.1 get basis b2 same as 2.1.1
         // Start of Selection
         // Calculate g_ij = <s_i, s_j>
-        let num_s: usize = s.len();
+        let num_s: usize = witness_s.len();
         let mut g_matrix: Vec<Vec<PolynomialRing>> = vec![
             vec![
                 PolynomialRing {
@@ -654,8 +654,8 @@ mod tests {
         for i in 0..num_s {
             for j in 0..num_s {
                 // calculate inner product of s[i] and s[j]
-                let elem_s_i = &s[i];
-                let elem_s_j = &s[j];
+                let elem_s_i = &witness_s[i];
+                let elem_s_j = &witness_s[j];
                 // Calculate inner product and update b
                 let inner_product_si_sj = inner_product_polynomial_ring(&elem_s_i, &elem_s_j);
                 g_matrix[i][j] = inner_product_si_sj;
@@ -714,11 +714,11 @@ mod tests {
         // Define necessary variables
         let t1 = digits;
         let t2 = digits;
-        let r = s_len;
+        let r = size_r;
         let B = &b_matrix.values;
         let C = &c_matrix.values;
         let t = &all_t_i_basis_form_aggregated;
-        let kappa = s_len;
+        let kappa = size_r;
         let kappa1 = 5;
         let kappa2 = 5;
         // Initialize u1 with zeros with size kappa1, each element is a polynomial ring
@@ -793,7 +793,7 @@ mod tests {
         // ================================================
 
         // 3. GOAL: JL projection
-        let nd = size_n * d;
+        let nd = size_n * deg_bound_d;
         // generate gaussian distribution matrix
         // TODO: should from verifier
         let gaussian_distribution_matrix = generate_gaussian_distribution(nd);
@@ -815,7 +815,7 @@ mod tests {
         // s_0: [PolynomialRing{coefficients: [1, 2, 3]}, PolynomialRing{coefficients: [4, 5, 6]}, PolynomialRing{coefficients: [7, 8, 9]}], output: ss_0 = [1, 2, 3, 4, 5, 6, 7, 8, 9]
         // s_1: [PolynomialRing{coefficients: [1, 2, 3]}, PolynomialRing{coefficients: [4, 5, 6]}, PolynomialRing{coefficients: [7, 8, 9]}], output: ss_1 = [1, 2, 3, 4, 5, 6, 7, 8, 9]
         // so ss = [ss_0, ss_1]
-        let s_coeffs: Vec<Vec<usize>> = s.iter()
+        let s_coeffs: Vec<Vec<usize>> = witness_s.iter()
             .map(|s_i| s_i.iter().map(|s_i_poly| s_i_poly.coefficients.clone()).flatten().collect())
             .collect();
 
@@ -841,17 +841,17 @@ mod tests {
         // 4. GOAL: Aggregation
         // 4.1 psi^(k) is randomly chosen from Z_q^{L}
         // k = 1..λ/log2^q
-        let k = lambda / log_q;
-        let psi_k = (0..k)
+        let size_k = lambda / log_q;
+        let psi_k = (0..size_k)
             .map(|_| (0..l).map(|_| rng.gen_range(0..q)).collect())
             .collect::<Vec<Vec<usize>>>();
-        assert_eq!(psi_k.len(), k);
+        assert_eq!(psi_k.len(), size_k);
         assert_eq!(psi_k[0].len(), l);
 
         // 4.2 omega^(k) is randomly chosen from Z_q^{256}
         //      (Both using Guassian Distribution)
-        let omega_k = (0..k).map(|_| (0..double_lambda).map(|_| rng.gen_range(0..q)).collect()).collect::<Vec<Vec<usize>>>();
-        assert_eq!(omega_k.len(), k);
+        let omega_k = (0..size_k).map(|_| (0..double_lambda).map(|_| rng.gen_range(0..q)).collect()).collect::<Vec<Vec<usize>>>();
+        assert_eq!(omega_k.len(), size_k);
         assert_eq!(omega_k[0].len(), double_lambda);
 
         // 4.3 caculate b^{''(k)}
