@@ -317,9 +317,9 @@ mod tests {
         );
 
         let mut rng = rand::thread_rng();
-        let k: usize = 6; // Change k to usize
-                          // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
-                          // todo: aij == aji
+        let k: usize = 6;
+        // Generate random a^(k)_{i,j} and φ^{(k)}_{i}
+        // todo: aij == aji
         let a_k: Vec<Vec<usize>> = (0..s_len)
             .map(|_| (0..s_len).map(|_| rng.gen_range(1..k)).collect())
             .collect();
@@ -664,6 +664,26 @@ mod tests {
 
         // 4.3 caculate b^{''(k)}
         // 4.3.1 calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
+        // a_l, phi_l
+        // for k from 1 to L
+        // calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
+        let aggregated_a_l: Vec<usize> = (0..k)
+            .map(|k_i| {
+                let psi_ki = &psi_k[k_i];
+                    // Start of Selection
+                    let mut sum = 0;
+                    for l_i in 0..l {
+                        let psi_ki_l = psi_ki[l_i];
+                        for i in 0..r {
+                            for j in i..r {
+                                sum += a_l[i][j] * psi_ki_l;
+                            }
+                }
+            }
+            sum
+        }).collect();
+        println!("aggregated_a_l: {:?}", aggregated_a_l);
+        assert_eq!(aggregated_a_l.len(), k);
         // 4.3.2 calculate phi_i^{''(k)} =
         //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
         //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
