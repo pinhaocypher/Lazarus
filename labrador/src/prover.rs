@@ -483,7 +483,7 @@ mod tests {
                     .map(|_| {
                         (0..size_r)
                             .map(|_| PolynomialRing {
-                                coefficients: (0..size_n).map(|_| rng.gen_range(0..q)).collect(),
+                                coefficients: (0..size_n).map(|_| rng.gen_range(0..10)).collect(),
                             })
                             .collect()
                     })
@@ -494,7 +494,7 @@ mod tests {
         let phi_constraint: Vec<Vec<PolynomialRing>> = (0..k)
             .map(|_| (0..size_n)
                 .map(|_| PolynomialRing {
-                    coefficients: (0..size_n).map(|_| rng.gen_range(0..q)).collect(),
+                    coefficients: (0..size_n).map(|_| rng.gen_range(0..10)).collect(),
                 })
                 .collect()
             )
@@ -518,7 +518,7 @@ mod tests {
                     .map(|_| {
                         (0..size_r)
                             .map(|_| PolynomialRing {
-                                coefficients: (0..size_n).map(|_| rng.gen_range(0..q)).collect(),
+                                coefficients: (0..size_n).map(|_| rng.gen_range(0..10)).collect(),
                             })
                             .collect()
                     })
@@ -842,8 +842,8 @@ mod tests {
         // 4.1 psi^(k) is randomly chosen from Z_q^{L}
         // k = 1..λ/log2^q
         let size_k = lambda / log_q;
-        let psi_k = (0..size_k)
-            .map(|_| (0..l).map(|_| rng.gen_range(0..q)).collect())
+        let psi_challenge = (0..size_k)
+            .map(|_| (0..size_l).map(|_| rng.gen_range(0..10)).collect())
             .collect::<Vec<Vec<usize>>>();
         assert_eq!(psi_k.len(), size_k);
         assert_eq!(psi_k[0].len(), l);
