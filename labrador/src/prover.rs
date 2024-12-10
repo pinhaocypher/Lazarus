@@ -339,11 +339,9 @@ mod tests {
         println!("phi_constraint: {:?}", phi_constraint);
 
         // calculate b^(k)
-        let mut b_constraint = Vec::new();
-        for k_i in 0..k {
-            let b_i = calculate_b_constraint(&s, &a_constraint[k_i], &phi_constraint[k_i]);
-            b_constraint.push(b_i);
-        }
+        let b_constraint: Vec<PolynomialRing> = (0..k)
+            .map(|k_i| calculate_b_constraint(&s, &a_constraint[k_i], &phi_constraint[k_i]))
+            .collect();
         println!("b_constraint: {:?}", b_constraint);
 
         // In DPCS(dot product constraint system) for constant terms(ct), there are k constraints, each constraint has a, phi and b.
@@ -374,13 +372,12 @@ mod tests {
             )
             .collect();
         // calculate b^(l)
-        let mut b_constraint_ct = Vec::new();
         // todo: only need to keep constant term?
-        for l_i  in 0..l {
-            let b_i = calculate_b_constraint(&s, &a_constraint_ct[l_i], &phi_constraint_ct[l_i]);
-            b_constraint_ct.push(b_i);
-        }
+        let b_constraint_ct: Vec<PolynomialRing> = (0..l)
+            .map(|l_i| calculate_b_constraint(&s, &a_constraint_ct[l_i], &phi_constraint_ct[l_i]))
+            .collect();
         println!("b_constraint_ct: {:?}", b_constraint_ct);
+
         let size_kappa = 3; // Example size
         // let size_n = 5;
         // A: matrix size: kappa * n, each element is PolynomialRing(Rq)
