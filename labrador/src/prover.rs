@@ -413,7 +413,7 @@ impl Sum for Zq {
 
 
 // inner product of 2 vectors of PolynomialRing
-fn inner_product_polynomial_ring(
+fn inner_product_polynomial_ring_vector(
     a: &Vec<PolynomialRing>,
     b: &Vec<PolynomialRing>,
 ) -> PolynomialRing {
@@ -453,7 +453,7 @@ fn calculate_b_constraint(
             let elem_s_i = &s[i];
             let elem_s_j = &s[j];
             // Calculate inner product and update b
-            let inner_product_si_sj = inner_product_polynomial_ring(&elem_s_i, &elem_s_j);
+            let inner_product_si_sj = inner_product_polynomial_ring_vector(&elem_s_i, &elem_s_j);
             let a_constr = &a_constraint[i][j];
             b = b.add_polynomial_ring(&inner_product_si_sj.multiply_by_polynomial_ring(a_constr));
         }
@@ -693,8 +693,8 @@ mod tests {
         // In DPCS(dot product constraint system) for constant terms(ct), there are k constraints, each constraint has a, phi and b.
         // Generate random a^(l)_{i,j}: l length vector of matrix, matrix length is r x r, each element is a Zq
         // todo: aij == aji
-        let size_l = Zq::new(5); // Define L
-        let a_constraint_ct: Vec<Vec<Vec<PolynomialRing>>> = (0..size_l.value())
+        let constraint_num_l = Zq::new(5); // Define L
+        let a_constraint_ct: Vec<Vec<Vec<PolynomialRing>>> = (0..constraint_num_l.value())
             .map(|_| {
                 (0..size_r.value())
                     .map(|_| {
@@ -729,7 +729,7 @@ mod tests {
 
         // calculate b^(l)
         // todo: only need to keep constant term?
-        let b_constraint_ct: Vec<PolynomialRing> = (0..size_l.value())
+        let b_constraint_ct: Vec<PolynomialRing> = (0..constraint_num_l.value())
             .map(|l| calculate_b_constraint(&witness_s, &a_constraint_ct[l], &phi_constraint_ct[l]))
             .collect();
         println!("b_constraint_ct: {:?}", b_constraint_ct);
@@ -849,7 +849,7 @@ mod tests {
                 let elem_s_i = &witness_s[i];
                 let elem_s_j = &witness_s[j];
                 // Calculate inner product and update b
-                let inner_product_si_sj = inner_product_polynomial_ring(&elem_s_i, &elem_s_j);
+                let inner_product_si_sj = inner_product_polynomial_ring_vector(&elem_s_i, &elem_s_j);
                 g_matrix[i][j] = inner_product_si_sj;
             }
         }
@@ -905,7 +905,6 @@ mod tests {
         // Define necessary variables
         let t1 = digits;
         let t2 = digits;
-        let r = size_r;
         let B = &b_matrix.values;
         let C = &c_matrix.values;
         let t = &all_t_i_basis_form_aggregated;
@@ -922,7 +921,7 @@ mod tests {
         // B_ik: Rq^{kappa1 x kappa}, t_i: Rq^{kappa}, t_i^(k): Rq^{kappa}
         // B_ik * t_i^(k): Rq^{kappa1}
         // First summation: ∑ B_ik * t_i^(k), 1 ≤ i ≤ r, 0 ≤ k ≤ t1−1
-        for i in 0..r.value() {
+        for i in 0..size_r.value() {
             for k in 0..t1.value() {
                 let b_i_k = RqMatrix::new(kappa1, kappa).values;
                 let t_i_k = &t[i][k];
@@ -951,8 +950,8 @@ mod tests {
         println!("u1: {:?}", u1);
 
         // Second summation: ∑ C_ijk * g_ij^(k)
-        for i in 0..r.value() {
-            for j in i..r.value() {
+        for i in 0..size_r.value() {
+            for j in i..size_r.value() {
                 // i ≤ j
                 for k in 0..t2.value() {
                     let c_i_j_k = RqMatrix::new(kappa2, Zq::from(1)).values;
@@ -1060,10 +1059,10 @@ mod tests {
         // k = 1..λ/log2^q
         let size_k = lambda / log_q;
         let psi_challenge: Vec<Vec<Zq>> = (0..size_k.value())
-            .map(|_| (0..size_l.value()).map(|_| Zq::new(rng.gen_range(0..10))).collect())
+            .map(|_| (0..constraint_num_l.value()).map(|_| Zq::new(rng.gen_range(0..10))).collect())
             .collect();
         assert_eq!(psi_challenge.len(), size_k.value());
-        assert_eq!(psi_challenge[0].len(), size_l.value());
+        assert_eq!(psi_challenge[0].len(), constraint_num_l.value());
 
         // 4.2 omega^(k) is randomly chosen from Z_q^{256}
         //      (Both using Guassian Distribution)
@@ -1082,9 +1081,9 @@ mod tests {
                 let mut sum = PolynomialRing {
                     coefficients: vec![Zq::from(0); deg_bound_d.value()],
                 };
-                for i in 0..r.value() {
-                    for j in i..r.value() {
-                        for l in 0..size_l.value() {
+                for i in 0..size_r.value() {
+                    for j in i..size_r.value() {
+                        for l in 0..constraint_num_l.value() {
                             let psi_k_l = psi_k[l];
                             sum = sum + &a_constraint_ct[l][i][j] * psi_k_l;
                         }
@@ -1107,9 +1106,9 @@ mod tests {
                 let mut phi_aggr_k: Vec<Vec<PolynomialRing>> = vec![vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()]; size_r.value()];
                 // sum part 1 and part 2 to get a polynomial ring
                 let mut sum: Vec<PolynomialRing> = vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()];
-                for i in 0..r.value() {
+                for i in 0..size_r.value() {
                     // part 1: sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
-                    for l in 0..size_l.value() {
+                    for l in 0..constraint_num_l.value() {
                         let psi_k_l = psi_k[l];
                         let phi_constraint_l_i = &phi_constraint_ct[l][i];
                         let product = phi_constraint_l_i.iter()
@@ -1143,11 +1142,11 @@ mod tests {
                 let a_constraint_ct_aggr_k = &a_constraint_ct_aggr[k];
                 let phi_aggr_k = &phi_aggr[k];
                 let mut sum = PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] };
-                for i in 0..r.value() {
-                    for j in i..r.value() {
-                        sum = sum + &a_constraint_ct_aggr_k[i][j] * inner_product_polynomial_ring(&witness_s[i], &witness_s[j]);
+                for i in 0..size_r.value() {
+                    for j in i..size_r.value() {
+                        sum = sum + &a_constraint_ct_aggr_k[i][j] * inner_product_polynomial_ring_vector(&witness_s[i], &witness_s[j]);
                     }
-                    sum = sum + inner_product_polynomial_ring(&phi_aggr_k[i], &witness_s[i]);
+                    sum = sum + inner_product_polynomial_ring_vector(&phi_aggr_k[i], &witness_s[i]);
                 }
                 sum
             })
@@ -1393,7 +1392,7 @@ mod tests {
             },
         ];
 
-        let result = inner_product_polynomial_ring(&a, &b);
+        let result = inner_product_polynomial_ring_vector(&a, &b);
 
         // Expected result calculation:
         // (1 + 2x + 3x^2) * (7 + 8x + 9x^2) = 7 + 22x + 46x^2 + 42x^3 + 27x^4
