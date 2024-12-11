@@ -1032,6 +1032,23 @@ mod tests {
         }
         println!("p: {:?}", p);
         assert_eq!(p.len(), double_lambda.value());
+
+        // sanity check: verify p_j = ct(sum(<σ−1(pi_i^(j)), s_i>)) for all i = 1..r
+        for j in 0..double_lambda.value() {
+            let mut sum = PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] };
+            for i in 0..size_r.value() {
+                let pai = &gaussian_distribution_matrices[i][j];
+                let s_i = &s_coeffs[i];
+                let pai_poly = PolynomialRing { coefficients: pai.clone() };
+                let pai_poly_ca = conjugation_automorphism(&pai_poly);
+                let s_i_poly = PolynomialRing { coefficients: s_i.clone() };
+                sum = sum + &pai_poly_ca * s_i_poly;
+            }
+            println!("sum: {:?}", sum);
+            assert_eq!(sum.coefficients[0], p[j]);
+        }
+
+
         // todo: send p to verifier(put in transcript)
 
         // 3.3 Verifier have to check: || p || <= \sqrt{128} * beta
