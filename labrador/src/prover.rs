@@ -2,6 +2,7 @@ use profiler_macro::time_profiler;
 use rand::Rng;
 use std::ops::Mul;
 use std::ops::Add;
+use std::ops::Sub;
 
 pub fn setup() {
     // 0. setup
@@ -291,6 +292,49 @@ impl Add<&usize> for &PolynomialRing {
     }
 }
 
+// Let q be a modulus, and let Zq be the ring of integers mod q
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Zq {
+    value: usize,
+}
+
+const Q: usize = 2usize.pow(32);
+
+impl Zq {
+    fn new(value: usize) -> Self {
+        Zq { value: value % Q }
+    }
+}
+
+impl Add for Zq {
+    type Output = Zq;
+
+    fn add(self, other: Zq) -> Zq {
+        Zq::new(self.value + other.value)
+    }
+}
+
+impl Sub for Zq {
+    type Output = Zq;
+
+    fn sub(self, other: Zq) -> Zq {
+        Zq::new((self.value + Q) - other.value)
+    }
+}
+
+impl Mul for Zq {
+    type Output = Zq;
+
+    fn mul(self, other: Zq) -> Zq {
+        Zq::new(self.value * other.value)
+    }
+}
+
+impl From<usize> for Zq {
+    fn from(value: usize) -> Self {
+        Zq::new(value)
+    }
+}
 
 
 // inner product of 2 vectors of PolynomialRing
@@ -1193,5 +1237,44 @@ mod tests {
         assert_eq!(c.coefficients, vec![5, 7, 9]);
         let d = &a * &b;
         assert_eq!(d.coefficients, vec![4, 13, 28, 27, 18]);
+    }
+
+    #[test]
+    fn test_zq_addition() {
+        let a = Zq::new(10);
+        let b = Zq::new(20);
+        let result = a + b;
+        assert_eq!(result.value, 30);
+    }
+
+    #[test]
+    fn test_zq_subtraction() {
+        let a = Zq::new(10);
+        let b = Zq::new(5);
+        let result = a - b;
+        assert_eq!(result.value, 5);
+    }
+
+    #[test]
+    fn test_zq_multiplication() {
+        let a = Zq::new(6);
+        let b = Zq::new(7);
+        let result = a * b;
+        assert_eq!(result.value, 42);
+    }
+
+    #[test]
+    fn test_zq_overflow() {
+        let a = Zq::new(Q - 1);
+        let b = Zq::new(2);
+        let result = a + b;
+        assert_eq!(result.value, 1); // (2^32 - 1) + 2 mod 2^32 = 1
+    }
+
+    #[test]
+    fn test_zq_new() {
+        let value = 4294967297; // Q + 1
+        let zq = Zq::new(value);
+        assert_eq!(zq.value, 1);
     }
 }
