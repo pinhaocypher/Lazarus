@@ -635,7 +635,7 @@ mod tests {
                 .iter()
                 .map(|elem| elem.coefficients[0].pow(2))
                 .fold(Zq::new(0), |acc, val| acc + val);
-            sum_squared_norms <= sum_squared_norms + norm_squared;
+            sum_squared_norms = sum_squared_norms + norm_squared;
         }
         println!("sum_squared_norms: {}", sum_squared_norms.value());
         println!("beta^2: {}", beta.pow(2));
