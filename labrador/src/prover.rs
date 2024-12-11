@@ -426,7 +426,7 @@ fn inner_product_polynomial_ring(
         .unwrap()
 }
 
-fn inner_product_zq(a: &Vec<Zq>, b: &Vec<Zq>) -> Zq {
+fn inner_product_zq_vector(a: &Vec<Zq>, b: &Vec<Zq>) -> Zq {
     a.iter()
         .zip(b.iter())
         .map(|(a, b)| *a * *b)
@@ -615,7 +615,6 @@ mod tests {
         let size_r = Zq::new(3); // r: Number of witness elements
         let size_n = Zq::new(5); // n
         let beta = Zq::new(50); // Example value for beta
-            // Start of Selection
             let witness_s: Vec<Vec<PolynomialRing>> = (1 ..= size_r.value())
             .map(|i| {
                 (1..=size_n.value())
@@ -667,7 +666,6 @@ mod tests {
                     .collect()
             })
             .collect();
-        // Start of Selection
         let phi_constraint: Vec<Vec<Vec<PolynomialRing>>> = (0..constraint_num_k.value())
             .map(|_| {
                 (0..size_r.value())
@@ -833,7 +831,6 @@ mod tests {
         );
         // 2
         // 2.2.1 get basis b2 same as 2.1.1
-        // Start of Selection
         // Calculate g_ij = <s_i, s_j>
         let num_s = Zq::new(witness_s.len());
         let mut g_matrix: Vec<Vec<PolynomialRing>> = vec![
@@ -905,7 +902,6 @@ mod tests {
         let b_matrix = RqMatrix::new(size_b[0], size_b[1]);
         let c_matrix = RqMatrix::new(size_c[0], size_c[1]);
         // 2.3.2 calculate u1 = sum(B_ik * t_i^(k)) + sum(C_ijk * g_ij^(k))
-        // Start of Selection
         // Define necessary variables
         let t1 = digits;
         let t2 = digits;
@@ -1024,16 +1020,14 @@ mod tests {
         println!("s_coeffs: {:?}", s_coeffs);
         // implement p calculation, inner product of gaussian_distribution_matrices and s_coeffs
         let mut p: Vec<Zq> = Vec::with_capacity(double_lambda.value());
-            // Start of Selection
-            for j in 0..double_lambda.value() {
-                let mut sum = Zq::new(0);
-                for i in 0..size_r.value() {
-                    sum += gaussian_distribution_matrices[i][j]
-                        .iter()
-                        .zip(s_coeffs[i].iter())
-                        .map(|(a, b)| *a * *b)
-                        .sum::<Zq>();
-                }
+        for j in 0..double_lambda.value() {
+            let mut sum = Zq::new(0);
+            for i in 0..size_r.value() {
+                let pai = &gaussian_distribution_matrices[i][j];
+                let s_i = &s_coeffs[i];
+                let inner_product = inner_product_zq_vector(&pai, &s_i);
+                sum = sum + inner_product;
+            }
             p.push(sum);
         }
         println!("p: {:?}", p);
@@ -1104,8 +1098,7 @@ mod tests {
                         let product = phi_constraint_l_i.iter()
                             .map(|p| p * psi_k_l)
                             .collect::<Vec<PolynomialRing>>();
-                            // Start of Selection
-                            sum = sum.iter().zip(product.iter()).map(|(a, b)| a + b).collect();
+                        sum = sum.iter().zip(product.iter()).map(|(a, b)| a + b).collect();
                     }
                     // part 2: sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
                     for j in 0..double_lambda.value() {
@@ -1113,8 +1106,8 @@ mod tests {
                         // Convert pai to a PolynomialRing before applying conjugation_automorphism
                         let pai = &gaussian_distribution_matrices[i][j];
                         let pai_poly = PolynomialRing { coefficients: pai.clone() };
-                        let sigma_neg_1_pai = conjugation_automorphism(&pai_poly);
-                        let product = sigma_neg_1_pai * omega_k_j;
+                        let pai_poly_ca = conjugation_automorphism(&pai_poly);
+                        let product = pai_poly_ca * omega_k_j;
                         // each item in sum add product
                         sum = sum.iter().map(|s| s + &product).collect();
                     }
@@ -1489,7 +1482,7 @@ mod tests {
         };
 
         // Compute <a, b>
-        let inner_ab = inner_product_zq(&a.coefficients, &b.coefficients);
+        let inner_ab = inner_product_zq_vector(&a.coefficients, &b.coefficients);
         println!("inner_ab: {:?}", inner_ab);
         assert_eq!(
             inner_ab.value(),
