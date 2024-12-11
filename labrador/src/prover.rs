@@ -426,6 +426,14 @@ fn inner_product_polynomial_ring(
         .unwrap()
 }
 
+fn inner_product_zq(a: &Vec<Zq>, b: &Vec<Zq>) -> Zq {
+    a.iter()
+        .zip(b.iter())
+        .map(|(a, b)| *a * *b)
+        .sum()
+}
+
+
 // Function to calculate b^(k)
 fn calculate_b_constraint(
     s: &Vec<Vec<PolynomialRing>>,
@@ -559,6 +567,35 @@ fn generate_gaussian_distribution(nd: Zq) -> Vec<Vec<Zq>> {
 
     matrix
 }
+
+// Conjugation Automorphism σ_{-1}
+// for polynomial ring a = 1+2x+3x^2, since x^64 = -1, apply this method to a, will get 1+2*(Zq.modulus()-1) * x^(64-1) +3*(Zq.modulus()-1) * x^(64-2)
+fn conjugation_automorphism(poly: &PolynomialRing) -> PolynomialRing {
+    let modulus_minus_one = Zq::from(Zq::modulus() - 1);
+    let transformed_coeffs: Vec<Zq> = (0..PolynomialRing::DEGREE_BOUND)
+        .map(|i| {
+            if i < poly.coefficients.len() {
+                if i == 0 {
+                    poly.coefficients[i].clone()
+                } else {
+                    poly.coefficients[i].clone() * modulus_minus_one
+                }
+            } else {
+                Zq::from(0)
+            }
+        })
+        .collect();
+    // reverse the coefficients except constant term
+    let reversed_coefficients = transformed_coeffs.iter()
+        .take(1)
+        .cloned()
+        .chain(transformed_coeffs.iter().skip(1).rev().cloned())
+        .collect::<Vec<Zq>>();
+    PolynomialRing {
+        coefficients: reversed_coefficients,
+    }
+}
+
 
 // create test case for setup
 #[cfg(test)]
@@ -1073,10 +1110,10 @@ mod tests {
                     // part 2: sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
                     for j in 0..double_lambda.value() {
                         let omega_k_j = omega_challenge[k][j];
-                        // todo: to be checked, we just reverse the vector from gaussian_distribution_matries
-                        let sigma_neg_1_pai = PolynomialRing {
-                            coefficients: gaussian_distribution_matrices[i][j].iter().rev().cloned().collect(),
-                        };
+                        // Convert pai to a PolynomialRing before applying conjugation_automorphism
+                        let pai = &gaussian_distribution_matrices[i][j];
+                        let pai_poly = PolynomialRing { coefficients: pai.clone() };
+                        let sigma_neg_1_pai = conjugation_automorphism(&pai_poly);
                         let product = sigma_neg_1_pai * omega_k_j;
                         // each item in sum add product
                         sum = sum.iter().map(|s| s + &product).collect();
@@ -1439,5 +1476,40 @@ mod tests {
         let b = Zq::new(3);
         let result = a % b;
         assert_eq!(result.value, 1);
+    }
+
+    #[test]
+    fn test_conjugation_automorphism() {
+        // Create example PolynomialRings a and b
+        let a = PolynomialRing {
+            coefficients: vec![Zq::from(1), Zq::from(2), Zq::from(3)],
+        };
+        let b = PolynomialRing {
+            coefficients: vec![Zq::from(4), Zq::from(5), Zq::from(6)],
+        };
+
+        // Compute <a, b>
+        let inner_ab = inner_product_zq(&a.coefficients, &b.coefficients);
+        println!("inner_ab: {:?}", inner_ab);
+        assert_eq!(
+            inner_ab.value(),
+            32
+        );
+        // Compute σ_{-1}(a)
+        let sigma_inv_a = conjugation_automorphism(&a);
+        println!("sigma_inv_a: {:?}", sigma_inv_a);
+        // Compute <σ_{-1}(a), b>
+        let inner_sigma_inv_a_b = &sigma_inv_a * &b;
+        println!("inner_sigma_inv_a_b: {:?}", inner_sigma_inv_a_b);
+
+        // Get the constant term of <σ_{-1}(a), b>
+        let ct_inner_sigma_inv_a_b = inner_sigma_inv_a_b.coefficients[0];
+
+        // Assert that <a, b> == ct <σ_{-1}(a), b>
+        assert_eq!(
+            inner_ab,
+            ct_inner_sigma_inv_a_b,
+            "<a, b> should equal the constant term of <σ-1(a), b>"
+        );
     }
 }
