@@ -596,6 +596,12 @@ fn conjugation_automorphism(poly: &PolynomialRing) -> PolynomialRing {
     }
 }
 
+fn generate_random_polynomial_ring(deg_bound_d: usize) -> PolynomialRing {
+    let mut rng = rand::thread_rng();
+    PolynomialRing {
+        coefficients: (0..deg_bound_d).map(|_| Zq::from(rng.gen_range(0..10))).collect(),
+    }
+}
 
 // create test case for setup
 #[cfg(test)]
@@ -608,23 +614,16 @@ mod tests {
     fn test_setup_prover() {
         let lambda = Zq::new(128);
         let double_lambda = lambda * Zq::new(2);
-        let q = Zq::new(2usize.pow(32));
         let log_q = Zq::new(32);
-        let deg_bound_d = Zq::new(3); // TODO: should be 64
+        let deg_bound_d = Zq::new(8); // random polynomial degree bound
         // s is a vector of size r. each s_i is a PolynomialRing<Zq> with n coefficients
         let size_r = Zq::new(3); // r: Number of witness elements
         let size_n = Zq::new(5); // n
         let beta = Zq::new(50); // Example value for beta
-            let witness_s: Vec<Vec<PolynomialRing>> = (1 ..= size_r.value())
-            .map(|i| {
-                (1..=size_n.value())
-                    .map(|j| PolynomialRing {
-                        coefficients: vec![
-                            Zq::new(i * 3 + j),
-                            Zq::new(i * 3 + j + 1),
-                            Zq::new(i * 3 + j + 2),
-                        ],
-                    })
+        let witness_s: Vec<Vec<PolynomialRing>> = (0..size_r.value())
+            .map(|_| {
+                (0..size_n.value())
+                    .map(|_| generate_random_polynomial_ring(deg_bound_d.value()))
                     .collect()
             })
             .collect();
@@ -655,12 +654,8 @@ mod tests {
             .map(|_| {
                 (0..size_r.value())
                     .map(|_| {
-                        (0..size_r.value())
-                            .map(|_| PolynomialRing {
-                                coefficients: (0..deg_bound_d.value())
-                                    .map(|_| Zq::new(rng.gen_range(0..10)))
-                                    .collect(),
-                            })
+                        (0..size_n.value())
+                            .map(|_| generate_random_polynomial_ring(deg_bound_d.value()))
                             .collect()
                     })
                     .collect()
@@ -671,11 +666,7 @@ mod tests {
                 (0..size_r.value())
                     .map(|_| {
                         (0..size_n.value())
-                            .map(|_| PolynomialRing {
-                                coefficients: (0..deg_bound_d.value())
-                                    .map(|_| Zq::new(rng.gen_range(0..10)))
-                                    .collect(),
-                            })
+                            .map(|_| generate_random_polynomial_ring(deg_bound_d.value()))
                             .collect()
                     })
                     .collect()
@@ -683,11 +674,7 @@ mod tests {
             .collect();
 
         let b_constraint: Vec<PolynomialRing> = (0..constraint_num_k.value())
-            .map(|_| PolynomialRing {
-                coefficients: (0..deg_bound_d.value())
-                    .map(|_| Zq::new(rng.gen_range(0..10)))
-                    .collect(),
-            })
+            .map(|_| generate_random_polynomial_ring(deg_bound_d.value()))
             .collect();
 
         // In DPCS(dot product constraint system) for constant terms(ct), there are k constraints, each constraint has a, phi and b.
@@ -698,10 +685,8 @@ mod tests {
             .map(|_| {
                 (0..size_r.value())
                     .map(|_| {
-                        (0..size_r.value())
-                            .map(|_| PolynomialRing {
-                                coefficients: (0..size_n.value()).map(|_| Zq::new(rng.gen_range(0..10))).collect(),
-                            })
+                        (0..size_n.value())
+                            .map(|_| generate_random_polynomial_ring(deg_bound_d.value()))
                             .collect()
                     })
                     .collect()
@@ -714,9 +699,7 @@ mod tests {
                 (0..size_r.value())
                     .map(|_| {
                         (0..size_n.value())
-                            .map(|_| PolynomialRing {
-                                coefficients: (0..deg_bound_d.value()).map(|_| Zq::new(rng.gen_range(0..10))).collect(),
-                            })
+                            .map(|_| generate_random_polynomial_ring(deg_bound_d.value()))
                             .collect()
                     })
                     .collect()
