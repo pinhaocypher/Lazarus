@@ -97,18 +97,36 @@ pub fn prove() {
 // Assuming you have a PolynomialRing type defined
 #[derive(Debug, Clone)]
 struct PolynomialRing {
-    coefficients: Vec<Zq>, // Example field, adjusted to use Zq
+    coefficients: Vec<Zq>,
 }
 
 impl PolynomialRing {
-    // Add this method to enable multiplication by PolynomialRing
+    const DEGREE_BOUND: usize = 64;
+
+    fn new(coefficients: Vec<Zq>) -> Self {
+        // Ensure coefficients are in Zq and degree is less than 64
+        assert!(coefficients.len() <= Self::DEGREE_BOUND, "Polynomial degree must be less than 64");
+        PolynomialRing { coefficients: coefficients.clone() }
+    }
+    // Multiply two polynomials in R = Zq[X]/(X^64 + 1)
     fn multiply_by_polynomial_ring(&self, other: &PolynomialRing) -> PolynomialRing {
+        // Initialize a vector to hold the intermediate multiplication result
         let mut result_coefficients =
             vec![Zq::new(0); self.coefficients.len() + other.coefficients.len() - 1];
         for (i, coeff1) in self.coefficients.iter().enumerate() {
             for (j, coeff2) in other.coefficients.iter().enumerate() {
                 result_coefficients[i + j] = result_coefficients[i + j] + (*coeff1 * *coeff2);
             }
+        }
+
+        // Reduce modulo X^64 + 1
+        if result_coefficients.len() > Self::DEGREE_BOUND {
+            let modulus_minus_one = Zq::from(Zq::modulus() - 1);
+            for i in Self::DEGREE_BOUND..result_coefficients.len() {
+                let overflow = result_coefficients[i].clone();
+                result_coefficients[i - Self::DEGREE_BOUND] = result_coefficients[i - Self::DEGREE_BOUND].clone() + (overflow * modulus_minus_one);
+            }
+            result_coefficients.truncate(Self::DEGREE_BOUND);
         }
         PolynomialRing {
             coefficients: result_coefficients,
@@ -1134,6 +1152,46 @@ mod tests {
         };
         let result = poly1.multiply_by_polynomial_ring(&poly2);
         assert_eq!(result.coefficients, vec![Zq::from(3), Zq::from(10), Zq::from(8)]); // 1*3, 1*4 + 2*3, 2*4
+    }
+    #[test]
+    fn test_polynomial_ring_mul_overflow() {
+        // Create two polynomials that will cause overflow when multiplied
+        // For example, (X^63 + 1) * (X^63 + 1) = X^126 + 2X^63 + 1
+        // Modulo X^64 + 1, X^64 = -1, so X^126 = X^(2*64 -2) = X^-2 = X^62
+        // Thus, X^126 + 2X^63 +1 mod X^64+1 = (-1)*X^62 + 2X^63 +1
+
+        // Initialize poly1 as X^63 + 1
+        let mut poly1_coeffs = vec![Zq::from(0); 64];
+        poly1_coeffs[0] = Zq::from(1);    // Constant term
+        poly1_coeffs[63] = Zq::from(1);   // X^63 term
+        let poly1 = PolynomialRing {
+            coefficients: poly1_coeffs,
+        };
+
+        // Multiply poly1 by itself
+        let product = poly1.clone() * poly1.clone();
+
+        // Expected coefficients after reduction modulo X^64 + 1:
+        // coefficients[0] = 1
+        // coefficients[62] = Zq::modulus() - 1  (since -1 mod q)
+        // coefficients[63] = 2
+        // All other coefficients should be 0
+        let mut expected_coeffs = vec![Zq::from(1)];
+        for _ in 1..62 {
+            expected_coeffs.push(Zq::from(0));
+        }
+        expected_coeffs.push(Zq::from(Zq::modulus() - 1)); // X^62 term
+        expected_coeffs.push(Zq::from(2));                  // X^63 term
+
+        // Assert that the product has the correct degree bound
+        assert_eq!(product.coefficients.len(), 64, "Product should be truncated to DEGREE_BOUND");
+
+        // Assert that the coefficients match the expected values
+        assert_eq!(
+            product.coefficients,
+            expected_coeffs,
+            "Overflow handling in multiplication is incorrect"
+        );
     }
 
     #[test]
