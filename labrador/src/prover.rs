@@ -1090,9 +1090,22 @@ mod tests {
         println!("b_aggr: {:?}", b_aggr);
         assert_eq!(b_aggr.len(), size_k.value());
 
-        // Send b^{''(k)} to verifier
-        // Verifier check: b_0^{''(k)} ?= <⟨omega^(k),p⟩> + sum(psi_l^(k) * b_0^{'(l)}) for all l = 1..L
+        // todo: send b^{''(k)} to verifier
 
+        // Verifier check: b_0^{''(k)} ?= <⟨omega^(k),p⟩> + sum(psi_l^(k) * b_0^{'(l)}) for all l = 1..L
+        for k in 0..size_k {
+            let b_k_0_from_poly = b_aggr[k].coefficients[0];
+            // sum(psi_l^(k) * b_0^{'(l)}) for all l = 1..L
+            let mut b_k_0_computed = (0..size_l).map(|l| psi_challenge[k][l] * b_constraint_ct[l].coefficients[0]).sum::<usize>();
+            // <⟨omega^(k),p⟩>
+            let omega_k = &omega_challenge[k];
+            let p_inner_product = omega_k.iter().zip(p.iter()).map(|(a, b)| a * b).sum::<usize>();
+            // add them together
+            b_k_0_computed += p_inner_product;
+            // print k
+            println!("k: {}", k);
+            // assert_eq!(b_k_0_from_poly, b_k_0_computed);
+        }
         // ================================================
 
         // 5. GOAL: Calculate u2 (2nd outer commitment)
