@@ -694,7 +694,7 @@ mod tests {
             .collect();
         println!("a_constraint_ct: {:?}", a_constraint_ct);
         // Generate random phi^(k)_{i}: k length vector of matrix, matrix length is r x n, each element in matrix is a Zq
-        let phi_constraint_ct: Vec<Vec<Vec<PolynomialRing>>> = (0..constraint_num_k.value())
+        let phi_constraint_ct: Vec<Vec<Vec<PolynomialRing>>> = (0..constraint_num_l.value())
             .map(|_| {
                 (0..size_r.value())
                     .map(|_| {
@@ -706,7 +706,7 @@ mod tests {
             })
             .collect();
         println!("phi_constraint: {:?}", phi_constraint_ct);
-        assert_eq!(phi_constraint_ct.len(), constraint_num_k.value());
+        assert_eq!(phi_constraint_ct.len(), constraint_num_l.value());
         assert_eq!(phi_constraint_ct[0].len(), size_r.value());
         assert_eq!(phi_constraint_ct[0][0].len(), size_n.value());
 
