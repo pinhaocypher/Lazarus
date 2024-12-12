@@ -673,8 +673,9 @@ mod tests {
             .collect();
 
         let b_constraint: Vec<PolynomialRing> = (0..constraint_num_k.value())
-            .map(|_| generate_random_polynomial_ring(deg_bound_d.value()))
+            .map(|k| calculate_b_constraint(&witness_s, &a_constraint[k], &phi_constraint[k]))
             .collect();
+        println!("b_constraint: {:?}", b_constraint);
 
         // In DPCS(dot product constraint system) for constant terms(ct), there are k constraints, each constraint has a, phi and b.
         // Generate random a^(l)_{i,j}: l length vector of matrix, matrix length is r x r, each element is a Zq
