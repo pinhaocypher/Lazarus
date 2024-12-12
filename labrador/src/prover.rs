@@ -1607,4 +1607,49 @@ mod tests {
             "<a, b> should equal the constant term of <σ-1(a), b>"
         );
     }
+
+
+    #[test]
+    fn test_decompose_poly_to_basis_form() {
+        // Arrange: Create sample input polynomial rings
+        let poly1 = PolynomialRing {
+            coefficients: vec![
+                Zq::from(123),
+                Zq::from(456),
+                Zq::from(789),
+            ],
+        };
+        let poly2 = PolynomialRing {
+            coefficients: vec![
+                Zq::from(12),
+                Zq::from(45),
+                Zq::from(78),
+            ],
+        };
+        let poly_input = vec![
+            vec![poly1.clone(), poly2.clone()],
+        ];
+        let basis = Zq::from(10);
+        let digits = Zq::from(3);
+
+        // Act: Call the function to decompose the polynomial
+        let result = decompose_poly_to_basis_form(&poly_input, basis, digits);
+
+        let expected = vec![
+            vec![
+                vec![
+                    PolynomialRing { coefficients: vec![Zq::from(3), Zq::from(6), Zq::from(9)] },
+                    PolynomialRing { coefficients: vec![Zq::from(2), Zq::from(5), Zq::from(8)] },
+                    PolynomialRing { coefficients: vec![Zq::from(1), Zq::from(4), Zq::from(7)] },
+                ],
+                vec![
+                    PolynomialRing { coefficients: vec![Zq::from(2), Zq::from(5), Zq::from(8)] },
+                    PolynomialRing { coefficients: vec![Zq::from(1), Zq::from(4), Zq::from(7)] },
+                    PolynomialRing { coefficients: vec![Zq::from(0), Zq::from(0), Zq::from(0)] },
+                ],
+            ],
+        ];
+        assert_eq!(result, expected, "The decomposition did not match the expected output.");
+    }
+
 }
