@@ -1161,8 +1161,34 @@ mod tests {
         // ================================================
 
         // 5. GOAL: Calculate u2 (2nd outer commitment)
-        // 5.1 vec<alpha> and vec<beta> are randomly chosen from R_q^{128/logQ} // why is this not `L`
+        // 5.1 vec<alpha> and vec<beta> are randomly chosen from R_q^{K} and R_q^{128/logQ}
+        let alpha_challenge: Vec<PolynomialRing> = (0..constraint_num_k.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
+        let beta_challenge: Vec<PolynomialRing> = (0..size_k.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
         // 5.2 phi_i = sum(alpha_k * phi_i) + beta_k * phi_i^{''(k)}
+        let phi_aggr: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
+            // Part 1: sum(alpha_k * phi_i)
+            let part1: Vec<PolynomialRing> = (0..constraint_num_k.value()).map(|k| {
+                let alpha = &alpha_challenge[k];
+                phi_constraint[k][i].iter().map(|p| p * alpha).collect::<Vec<PolynomialRing>>()
+            }).fold(
+                vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
+                |acc, product| acc.iter().zip(product.iter()).map(|(a, b)| a + b).collect()
+            );
+
+            // Part 2: sum(beta_k * phi_i^{''(k)})
+            let part2: Vec<PolynomialRing> = (0..size_k.value()).map(|k| {
+                let beta = &beta_challenge[k];
+                phi_ct_aggr[k][i].iter().map(|p| p * beta).collect::<Vec<PolynomialRing>>()
+            }).fold(
+                vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
+                |acc, product| acc.iter().zip(product.iter()).map(|(a, b)| a + b).collect()
+            );
+            // Sum part1 and part2 element-wise
+            part1.iter().zip(part2.iter()).map(|(a, b)| a + b).collect::<Vec<PolynomialRing>>()
+        }).collect();
+        println!("phi_aggr: {:?}", phi_aggr);
+        assert_eq!(phi_aggr.len(), size_r.value());
+        assert_eq!(phi_aggr[0].len(), size_n.value());
         // 5.3 h_ij = 1/2 * (<phi_i, s_j> + <phi_j, s_i>)
         // 5.4 u2 = sum D_ij * h_ij^(k) for all k = 1..(t1-1)
 
