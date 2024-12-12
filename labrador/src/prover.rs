@@ -377,7 +377,7 @@ impl Add for Zq {
 
 impl AddAssign for Zq {
     fn add_assign(&mut self, other: Zq) {
-        self.value += other.value;
+        self.value = (self.value + other.value) % Self::Q;
     }
 }
 
