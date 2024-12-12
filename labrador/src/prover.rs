@@ -1104,11 +1104,17 @@ mod tests {
                         let omega_k_j = omega_challenge[k][j];
                         // Convert pai to a PolynomialRing before applying conjugation_automorphism
                         let pai = &gaussian_distribution_matrices[i][j];
-                        let pai_poly = PolynomialRing { coefficients: pai.clone() };
-                        let pai_poly_ca = conjugation_automorphism(&pai_poly);
-                        let product = pai_poly_ca * omega_k_j;
-                        // each item in sum add product
-                        sum = sum.iter().map(|s| s + &product).collect();
+                        let pai_chunks_ca: Vec<PolynomialRing> = pai.chunks(deg_bound_d.value())
+                            .take(size_n.value())
+                            .map(|chunk| {
+                                let pai_chunk_poly = PolynomialRing { coefficients: chunk.to_vec() };
+                                let pai_chunk_poly_ca = conjugation_automorphism(&pai_chunk_poly);
+                                pai_chunk_poly_ca * omega_k_j
+                            })
+                            .collect();
+                        assert_eq!(pai_chunks_ca.len(), size_n.value());
+                        assert_eq!(pai_chunks_ca[0].coefficients.len(), PolynomialRing::DEGREE_BOUND);
+                        sum = sum.iter().zip(pai_chunks_ca.iter()).map(|(a, b)| a + b).collect();
                     }
                     phi_aggr_k[i] = sum.clone();
                 }
