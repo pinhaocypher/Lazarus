@@ -1084,43 +1084,33 @@ mod tests {
         // 4.3.2 calculate phi_i^{''(k)} =
         //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
         //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
-        let phi_aggr: Vec<Vec<Vec<PolynomialRing>>> = (0..size_k.value())
-            .map(|k| {
-                let mut phi_aggr_k: Vec<Vec<PolynomialRing>> = vec![vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()]; size_r.value()];
-                // sum part 1 and part 2 to get a vector of polynomial ring
-                let mut sum: Vec<PolynomialRing> = vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()];
-                for i in 0..size_r.value() {
-                    // part 1: sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
-                    for l in 0..constraint_num_l.value() {
-                        let psi_k_l = psi_challenge[k][l];
-                        let phi_constraint_l_i = &phi_constraint_ct[l][i];
-                        let product = phi_constraint_l_i.iter()
-                            .map(|p| p * psi_k_l)
-                            .collect::<Vec<PolynomialRing>>();
-                        sum = sum.iter().zip(product.iter()).map(|(a, b)| a + b).collect();
-                    }
-                    // part 2: sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
-                    for j in 0..double_lambda.value() {
-                        let omega_k_j = omega_challenge[k][j];
-                        // Convert pai to a PolynomialRing before applying conjugation_automorphism
-                        let pai = &gaussian_distribution_matrices[i][j];
-                        let pai_chunks_ca: Vec<PolynomialRing> = pai.chunks(deg_bound_d.value())
-                            .take(size_n.value())
-                            .map(|chunk| {
-                                let pai_chunk_poly = PolynomialRing { coefficients: chunk.to_vec() };
-                                let pai_chunk_poly_ca = conjugation_automorphism(&pai_chunk_poly);
-                                pai_chunk_poly_ca * omega_k_j
-                            })
-                            .collect();
-                        assert_eq!(pai_chunks_ca.len(), size_n.value());
-                        assert_eq!(pai_chunks_ca[0].coefficients.len(), PolynomialRing::DEGREE_BOUND);
-                        sum = sum.iter().zip(pai_chunks_ca.iter()).map(|(a, b)| a + b).collect();
-                    }
-                    phi_aggr_k[i] = sum.clone();
-                }
-                phi_aggr_k
-            })
-            .collect();
+        let phi_aggr: Vec<Vec<Vec<PolynomialRing>>> = (0..size_k.value()).map(|k| {
+            (0..size_r.value()).map(|i| {
+                // Part 1: sum(psi_l^(k) * phi_constraint_ct[l][i] for all l)
+                let part1: Vec<PolynomialRing> = (0..constraint_num_l.value()).map(|l| {
+                    let psi = psi_challenge[k][l];
+                    phi_constraint_ct[l][i].iter().map(|p| p.clone() * psi).collect::<Vec<PolynomialRing>>()
+                }).fold(
+                    vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
+                    |acc, product| acc.iter().zip(product.iter()).map(|(a, b)| a.clone() + b.clone()).collect()
+                );
+
+                // Part 2: sum(omega_j^(k) * sigma_{-1} * pi_i^{j} for all j)
+                let part2: Vec<PolynomialRing> = (0..double_lambda.value()).map(|j| {
+                    let omega = omega_challenge[k][j];
+                    gaussian_distribution_matrices[i][j].chunks(deg_bound_d.value()).take(size_n.value()).map(|chunk| {
+                        let pai_poly = PolynomialRing { coefficients: chunk.to_vec() };
+                        conjugation_automorphism(&pai_poly) * omega
+                    }).collect::<Vec<PolynomialRing>>()
+                }).fold(
+                    vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
+                    |acc, chunks_ca| acc.iter().zip(chunks_ca.iter()).map(|(a, b)| a.clone() + b.clone()).collect()
+                );
+
+                // Sum part1 and part2 element-wise
+                part1.iter().zip(part2.iter()).map(|(a, b)| a.clone() + b.clone()).collect::<Vec<PolynomialRing>>()
+            }).collect::<Vec<Vec<PolynomialRing>>>()
+        }).collect();
         println!("phi_aggr: {:?}", phi_aggr);
         assert_eq!(phi_aggr.len(), size_k.value());
         assert_eq!(phi_aggr[0].len(), size_r.value());
