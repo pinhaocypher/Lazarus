@@ -1216,7 +1216,7 @@ mod tests {
         assert_eq!(phi_aggr.len(), size_r.value());
         assert_eq!(phi_aggr[0].len(), size_n.value());
         // 5.3 h_ij = 1/2 * (<phi_i, s_j> + <phi_j, s_i>)
-        let h_ij: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
+        let h_gar_poly: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
             (0..size_r.value()).map(|j| {
                 let phi_i = &phi_aggr[i];
                 let phi_j = &phi_aggr[j];
@@ -1226,20 +1226,63 @@ mod tests {
                 inner_product_ij / Zq::from(2)
             }).collect::<Vec<PolynomialRing>>()
         }).collect();
-        println!("h_ij: {:?}", h_ij);
-        assert_eq!(h_ij.len(), size_r.value());
-        assert_eq!(h_ij[0].len(), size_r.value());
+        println!("h_gar_poly: {:?}", h_gar_poly);
+        assert_eq!(h_gar_poly.len(), size_r.value());
+        assert_eq!(h_gar_poly[0].len(), size_r.value());
         for i in 0..size_r.value() {
             for j in (i + 1)..size_r.value() {
                 assert_eq!(
-                    h_ij[i][j],
-                    h_ij[j][i],
+                    h_gar_poly[i][j],
+                    h_gar_poly[j][i],
                     "h_ij is not equal to h_ji at indices ({}, {})",
                     i,
                     j
                 );
             }
         }
+
+        // decompose h_ij into basis t_1 parts
+        let h_gar_poly_basis_form: Vec<Vec<Vec<Vec<Zq>>>> = h_gar_poly
+            .iter()
+            .map(|t_i| {
+                t_i.iter()
+                    .map(|t_i_j| ring_polynomial_to_basis(t_i_j, basis, digits))
+                    .collect::<Vec<Vec<Vec<Zq>>>>()
+            })
+            .collect::<Vec<Vec<Vec<Vec<Zq>>>>>();
+        println!("h_gar_poly_basis_form: {:?}", h_gar_poly_basis_form);
+        println!("h_gar_poly[0]: {:?}", h_gar_poly[0]);
+        println!("h_gar_poly_basis_form[0]: {:?}", h_gar_poly_basis_form[0]);
+        // pick elements at each position across all inner vectors, put them into a vector
+        let mut h_gar_poly_basis_form_aggregated: Vec<Vec<Vec<PolynomialRing>>> = Vec::new();
+        for (i, h_gar_poly_i_basis_form) in h_gar_poly_basis_form.iter().enumerate() {
+            let mut row_results: Vec<Vec<PolynomialRing>> = Vec::new();
+            for (j, h_gar_poly_i_j_basis_form) in h_gar_poly_i_basis_form.iter().enumerate() {
+                let mut row_results_j: Vec<PolynomialRing> = Vec::new();
+                // Get the number of columns from the first inner vector
+                // h_gar_poly_i_j_basis_form: [[6, 1, 0], [6, 2, 0], [3, 9, 0], [8, 9, 0], [8, 3, 1], [5, 6, 0], [0, 5, 0]]
+                let num_basis_needed = h_gar_poly_i_j_basis_form.len();
+                let num_loop_needed = h_gar_poly_i_j_basis_form[0].len();
+                for k in 0..num_loop_needed {
+                    // println!("h_gar_poly_i_j_basis_form[{}][{}] = {:?}", i, j, h_gar_poly_i_j_basis_form[k]);
+                    let mut row_k: Vec<Zq> = Vec::new();
+                    for basis_needed in 0..num_basis_needed {
+                        let num_to_be_pushed = h_gar_poly_i_j_basis_form[basis_needed][k];
+                        // println!("h_gar_poly_i_j_basis_form_k[{}][{}]: {:?}", basis_needed, k, num_to_be_pushed);
+                        row_k.push(num_to_be_pushed);
+                    }
+                    row_results_j.push(PolynomialRing {
+                        coefficients: row_k,
+                    });
+                } // finish h_gar_poly_i_j_basis_form calculation
+                row_results.push(row_results_j);
+            }
+            h_gar_poly_basis_form_aggregated.push(row_results);
+        }
+        println!(
+            "h_gar_poly_basis_form_aggregated: {:?}",
+            h_gar_poly_basis_form_aggregated
+        );
         // 5.4 u2 = sum D_ij * h_ij^(k) for all k = 1..(t1-1)
 
         // Send u2 to verifier
