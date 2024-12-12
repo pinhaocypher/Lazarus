@@ -1118,20 +1118,20 @@ mod tests {
         // 4.3.3 calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>)
         let b_aggr: Vec<PolynomialRing> = (0..size_k.value())
             .map(|k| {
-                let a_constraint_ct_aggr_k = &a_constraint_ct_aggr[k];
-                let phi_ct_aggr_k = &phi_ct_aggr[k];
-                let mut sum = PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] };
-                for i in 0..size_r.value() {
-                    for j in 0..size_r.value() {
-                        // a_ij^{''(k)} * <s_i, s_j>
-                        let a_ij_k_times_s_i_s_j = &a_constraint_ct_aggr_k[i][j] * inner_product_polynomial_ring_vector(&witness_s[i], &witness_s[j]);
-                        sum = sum + a_ij_k_times_s_i_s_j;
-                    }
-                    // <phi_i^{''(k)}, s_i>
-                    let inner_product_phi_k_i_s_i = inner_product_polynomial_ring_vector(&phi_ct_aggr_k[i], &witness_s[i]);
-                    sum = sum + inner_product_phi_k_i_s_i;
-                }
-                sum
+                (0..size_r.value())
+                    .map(|i| {
+                        (0..size_r.value())
+                            .map(|j| &a_constraint_ct_aggr[k][i][j] * inner_product_polynomial_ring_vector(&witness_s[i], &witness_s[j]))
+                            .fold(
+                                PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] },
+                                |acc, x| acc + x
+                            )
+                            + inner_product_polynomial_ring_vector(&phi_ct_aggr[k][i], &witness_s[i])
+                    })
+                    .fold(
+                        PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] },
+                        |acc, x| acc + x
+                    )
             })
             .collect();
         println!("b_aggr: {:?}", b_aggr);
