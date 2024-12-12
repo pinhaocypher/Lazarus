@@ -1058,21 +1058,23 @@ mod tests {
         // 4.3.1 calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
         let a_constraint_ct_aggr: Vec<Vec<Vec<PolynomialRing>>> = (0..size_k.value())
             .map(|k| {
-                let mut a_constraint_ct_aggr_k: Vec<Vec<PolynomialRing>> = vec![vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_r.value()]; size_r.value()];
                 let psi_k = &psi_challenge[k];
-                let mut sum = PolynomialRing {
-                    coefficients: vec![Zq::from(0); deg_bound_d.value()],
-                };
-                for i in 0..size_r.value() {
-                    for j in i..size_r.value() {
-                        for l in 0..constraint_num_l.value() {
-                            let psi_k_l = psi_k[l];
-                            sum = sum + &a_constraint_ct[l][i][j] * psi_k_l;
-                        }
-                        a_constraint_ct_aggr_k[i][j] = sum.clone();
-                    }
-                }
-                a_constraint_ct_aggr_k
+                (0..size_r.value())
+                    .map(|i| {
+                        (0..size_r.value())
+                            .map(|j| {
+                                (0..constraint_num_l.value())
+                                    .map(|l| &a_constraint_ct[l][i][j] * psi_k[l])
+                                    .fold(
+                                        PolynomialRing {
+                                            coefficients: vec![Zq::from(0); deg_bound_d.value()],
+                                        },
+                                        |acc, x| acc + x,
+                                    )
+                            })
+                            .collect::<Vec<PolynomialRing>>()
+                    })
+                    .collect::<Vec<Vec<PolynomialRing>>>()
             })
             .collect();
         println!("a_constraint_ct_aggr: {:?}", a_constraint_ct_aggr);
