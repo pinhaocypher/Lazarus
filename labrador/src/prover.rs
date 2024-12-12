@@ -187,7 +187,6 @@ impl Mul<&PolynomialRing> for &PolynomialRing {
     }
 }
 
-// Start Generation Here
 impl Mul<Zq> for PolynomialRing {
     type Output = PolynomialRing;
 
@@ -1085,14 +1084,13 @@ mod tests {
         //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
         let phi_aggr: Vec<Vec<Vec<PolynomialRing>>> = (0..size_k.value())
             .map(|k| {
-                let psi_k = &psi_challenge[k];
                 let mut phi_aggr_k: Vec<Vec<PolynomialRing>> = vec![vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()]; size_r.value()];
-                // sum part 1 and part 2 to get a polynomial ring
+                // sum part 1 and part 2 to get a vector of polynomial ring
                 let mut sum: Vec<PolynomialRing> = vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()];
                 for i in 0..size_r.value() {
                     // part 1: sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
                     for l in 0..constraint_num_l.value() {
-                        let psi_k_l = psi_k[l];
+                        let psi_k_l = psi_challenge[k][l];
                         let phi_constraint_l_i = &phi_constraint_ct[l][i];
                         let product = phi_constraint_l_i.iter()
                             .map(|p| p * psi_k_l)
@@ -1126,10 +1124,14 @@ mod tests {
                 let phi_aggr_k = &phi_aggr[k];
                 let mut sum = PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] };
                 for i in 0..size_r.value() {
-                    for j in i..size_r.value() {
-                        sum = sum + &a_constraint_ct_aggr_k[i][j] * inner_product_polynomial_ring_vector(&witness_s[i], &witness_s[j]);
+                    for j in 0..size_r.value() {
+                        // a_ij^{''(k)} * <s_i, s_j>
+                        let a_ij_k_times_s_i_s_j = &a_constraint_ct_aggr_k[i][j] * inner_product_polynomial_ring_vector(&witness_s[i], &witness_s[j]);
+                        sum = sum + a_ij_k_times_s_i_s_j;
                     }
-                    sum = sum + inner_product_polynomial_ring_vector(&phi_aggr_k[i], &witness_s[i]);
+                    // <phi_i^{''(k)}, s_i>
+                    let inner_product_phi_k_i_s_i = inner_product_polynomial_ring_vector(&phi_aggr_k[i], &witness_s[i]);
+                    sum = sum + inner_product_phi_k_i_s_i;
                 }
                 sum
             })
@@ -1140,18 +1142,22 @@ mod tests {
         // todo: send b^{''(k)} to verifier
 
         // Verifier check: b_0^{''(k)} ?= <⟨omega^(k),p⟩> + sum(psi_l^(k) * b_0^{'(l)}) for all l = 1..L
-        for k in 0..size_k {
-            let b_k_0_from_poly = b_aggr[k].coefficients[0];
+        for k in 0..size_k.value() {
+            let b_k_0_from_poly: Zq = b_aggr[k].coefficients[0];
             // sum(psi_l^(k) * b_0^{'(l)}) for all l = 1..L
-            let mut b_k_0_computed = (0..size_l).map(|l| psi_challenge[k][l] * b_constraint_ct[l].coefficients[0]).sum::<usize>();
+            let mut b_k_0_computed: Zq = (0..constraint_num_l.value()).map(|l| {
+                let psi_k_l = psi_challenge[k][l];
+                let b_l_0 = b_constraint_ct[l].coefficients[0];
+                psi_k_l * b_l_0
+            }).sum();
             // <⟨omega^(k),p⟩>
             let omega_k = &omega_challenge[k];
-            let p_inner_product = omega_k.iter().zip(p.iter()).map(|(a, b)| a * b).sum::<usize>();
+            let inner_product_omega_k_p = inner_product_zq_vector(&omega_k, &p);
             // add them together
-            b_k_0_computed += p_inner_product;
+            b_k_0_computed += inner_product_omega_k_p;
             // print k
             println!("k: {}", k);
-            // assert_eq!(b_k_0_from_poly, b_k_0_computed);
+            assert_eq!(b_k_0_from_poly, b_k_0_computed);
         }
         // ================================================
 
