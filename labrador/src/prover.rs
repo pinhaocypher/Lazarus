@@ -1089,10 +1089,10 @@ mod tests {
                 // Part 1: sum(psi_l^(k) * phi_constraint_ct[l][i] for all l)
                 let part1: Vec<PolynomialRing> = (0..constraint_num_l.value()).map(|l| {
                     let psi = psi_challenge[k][l];
-                    phi_constraint_ct[l][i].iter().map(|p| p.clone() * psi).collect::<Vec<PolynomialRing>>()
+                    phi_constraint_ct[l][i].iter().map(|p| p * psi).collect::<Vec<PolynomialRing>>()
                 }).fold(
                     vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
-                    |acc, product| acc.iter().zip(product.iter()).map(|(a, b)| a.clone() + b.clone()).collect()
+                    |acc, product| acc.iter().zip(product.iter()).map(|(a, b)| a + b).collect()
                 );
 
                 // Part 2: sum(omega_j^(k) * sigma_{-1} * pi_i^{j} for all j)
@@ -1104,11 +1104,11 @@ mod tests {
                     }).collect::<Vec<PolynomialRing>>()
                 }).fold(
                     vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
-                    |acc, chunks_ca| acc.iter().zip(chunks_ca.iter()).map(|(a, b)| a.clone() + b.clone()).collect()
+                    |acc, chunks_ca| acc.iter().zip(chunks_ca.iter()).map(|(a, b)| a + b).collect()
                 );
 
                 // Sum part1 and part2 element-wise
-                part1.iter().zip(part2.iter()).map(|(a, b)| a.clone() + b.clone()).collect::<Vec<PolynomialRing>>()
+                part1.iter().zip(part2.iter()).map(|(a, b)| a + b).collect::<Vec<PolynomialRing>>()
             }).collect::<Vec<Vec<PolynomialRing>>>()
         }).collect();
         println!("phi_ct_aggr: {:?}", phi_ct_aggr);
