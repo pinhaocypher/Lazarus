@@ -8,6 +8,7 @@ use std::ops::Rem;
 use std::fmt::Display;
 use std::iter::Sum;
 use std::ops::AddAssign;
+use std::cmp::PartialEq;
 
 pub fn setup() {
     // 0. setup
@@ -217,6 +218,21 @@ impl Mul<Zq> for &PolynomialRing {
     }
 }
 
+impl Div<Zq> for PolynomialRing {
+    type Output = PolynomialRing;
+
+    fn div(self, other: Zq) -> PolynomialRing {
+        let new_coefficients = self
+            .coefficients
+            .iter()
+            .map(|c| Zq::new(c.value() / other.value()))
+            .collect();
+        PolynomialRing {
+            coefficients: new_coefficients,
+        }
+    }
+}
+
 impl Add for PolynomialRing {
     type Output = PolynomialRing;
 
@@ -310,6 +326,16 @@ impl Add<&Zq> for &PolynomialRing {
         PolynomialRing {
             coefficients: new_coefficients,
         }
+    }
+}
+
+impl PartialEq for PolynomialRing {
+    fn eq(&self, other: &Self) -> bool {
+        // Compare coefficients, ignoring trailing zeros
+        let self_coeffs = self.coefficients.iter().rev().skip_while(|&&x| x == Zq::from(0)).collect::<Vec<_>>();
+        let other_coeffs = other.coefficients.iter().rev().skip_while(|&&x| x == Zq::from(0)).collect::<Vec<_>>();
+
+        self_coeffs == other_coeffs
     }
 }
 
@@ -1190,6 +1216,30 @@ mod tests {
         assert_eq!(phi_aggr.len(), size_r.value());
         assert_eq!(phi_aggr[0].len(), size_n.value());
         // 5.3 h_ij = 1/2 * (<phi_i, s_j> + <phi_j, s_i>)
+        let h_ij: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
+            (0..size_r.value()).map(|j| {
+                let phi_i = &phi_aggr[i];
+                let phi_j = &phi_aggr[j];
+                let s_i = &witness_s[i];
+                let s_j = &witness_s[j];
+                let inner_product_ij = inner_product_polynomial_ring_vector(&phi_i, &s_j) + inner_product_polynomial_ring_vector(&phi_j, &s_i);
+                inner_product_ij / Zq::from(2)
+            }).collect::<Vec<PolynomialRing>>()
+        }).collect();
+        println!("h_ij: {:?}", h_ij);
+        assert_eq!(h_ij.len(), size_r.value());
+        assert_eq!(h_ij[0].len(), size_r.value());
+        for i in 0..size_r.value() {
+            for j in (i + 1)..size_r.value() {
+                assert_eq!(
+                    h_ij[i][j],
+                    h_ij[j][i],
+                    "h_ij is not equal to h_ji at indices ({}, {})",
+                    i,
+                    j
+                );
+            }
+        }
         // 5.4 u2 = sum D_ij * h_ij^(k) for all k = 1..(t1-1)
 
         // Send u2 to verifier
