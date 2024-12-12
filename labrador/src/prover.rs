@@ -628,6 +628,57 @@ fn generate_random_polynomial_ring(deg_bound_d: usize) -> PolynomialRing {
     }
 }
 
+
+fn decompose_poly_to_basis_form(
+    poly: &Vec<Vec<PolynomialRing>>,
+    basis: Zq,
+    digits: Zq,
+) -> Vec<Vec<Vec<PolynomialRing>>> {
+    // Decompose h_ij into basis t_1 parts
+    let poly_basis_form: Vec<Vec<Vec<Vec<Zq>>>> = poly
+        .iter()
+        .map(|t_i| {
+            t_i.iter()
+                .map(|t_i_j| ring_polynomial_to_basis(t_i_j, basis, digits))
+                .collect::<Vec<Vec<Vec<Zq>>>>()
+        })
+        .collect::<Vec<Vec<Vec<Vec<Zq>>>>>();
+    println!("poly_basis_form: {:?}", poly_basis_form);
+    println!("poly[0]: {:?}", poly[0]);
+    println!("poly_basis_form[0]: {:?}", poly_basis_form[0]);
+
+    // Pick elements at each position across all inner vectors and aggregate them
+    let mut poly_basis_form_aggregated: Vec<Vec<Vec<PolynomialRing>>> = Vec::new();
+    for (_i, poly_i_basis_form) in poly_basis_form.iter().enumerate() {
+        let mut row_results: Vec<Vec<PolynomialRing>> = Vec::new();
+        for (_j, poly_i_j_basis_form) in poly_i_basis_form.iter().enumerate() {
+            let mut row_results_j: Vec<PolynomialRing> = Vec::new();
+            // Get the number of basis parts and the number of loops needed
+            let num_basis_needed = poly_i_j_basis_form.len();
+            let num_loop_needed = poly_i_j_basis_form
+                .first()
+                .map_or(0, |v| v.len());
+            for k in 0..num_loop_needed {
+                let mut row_k: Vec<Zq> = Vec::new();
+                for basis_needed in 0..num_basis_needed {
+                    if let Some(num_to_be_pushed) = poly_i_j_basis_form.get(basis_needed).and_then(|v| v.get(k)) {
+                        row_k.push(num_to_be_pushed.clone());
+                    } else {
+                        row_k.push(Zq::from(0));
+                    }
+                }
+                row_results_j.push(PolynomialRing {
+                    coefficients: row_k,
+                });
+            } // finish poly_i_j_basis_form calculation
+            row_results.push(row_results_j);
+        }
+        poly_basis_form_aggregated.push(row_results);
+    }
+    poly_basis_form_aggregated
+}
+
+
 // create test case for setup
 #[cfg(test)]
 mod tests {
@@ -796,44 +847,8 @@ mod tests {
 
         let basis = Zq::new(10);
         let digits = Zq::new(3); // t1
-        let all_t_i_basis_form: Vec<Vec<Vec<Vec<Zq>>>> = all_t_i
-            .iter()
-            .map(|t_i| {
-                t_i.iter()
-                    .map(|t_i_j| ring_polynomial_to_basis(t_i_j, basis, digits))
-                    .collect::<Vec<Vec<Vec<Zq>>>>()
-            })
-            .collect::<Vec<Vec<Vec<Vec<Zq>>>>>();
-        println!("all_t_i_basis_form: {:?}", all_t_i_basis_form);
-        // print t_0
-        println!("t_0: {:?}", all_t_i[0]);
-        println!("t_0_basis_form: {:?}", all_t_i_basis_form[0]);
-        // pick elements at each position across all inner vectors, put them into a vector
-        let mut all_t_i_basis_form_aggregated: Vec<Vec<Vec<PolynomialRing>>> = Vec::new();
-        for (i, t_i_basis_form) in all_t_i_basis_form.iter().enumerate() {
-            let mut row_results: Vec<Vec<PolynomialRing>> = Vec::new();
-            for (j, t_i_j_basis_form) in t_i_basis_form.iter().enumerate() {
-                let mut row_results_j: Vec<PolynomialRing> = Vec::new();
-                // Get the number of columns from the first inner vector
-                // t_i_j_basis_form: [[6, 1, 0], [6, 2, 0], [3, 9, 0], [8, 9, 0], [8, 3, 1], [5, 6, 0], [0, 5, 0]]
-                let num_basis_needed = t_i_j_basis_form.len();
-                let num_loop_needed = t_i_j_basis_form[0].len();
-                for k in 0..num_loop_needed {
-                    // println!("t_i_j_basis_form[{}][{}] = {:?}", i, j, t_i_j_basis_form[k]);
-                    let mut row_k: Vec<Zq> = Vec::new();
-                    for basis_needed in 0..num_basis_needed {
-                        let num_to_be_pushed = t_i_j_basis_form[basis_needed][k];
-                        // println!("t_i_j_basis_form_k[{}][{}]: {:?}", basis_needed, k, num_to_be_pushed);
-                        row_k.push(num_to_be_pushed);
-                    }
-                    row_results_j.push(PolynomialRing {
-                        coefficients: row_k,
-                    });
-                } // finish t_i_j_basis_form calculation
-                row_results.push(row_results_j);
-            }
-            all_t_i_basis_form_aggregated.push(row_results);
-        }
+
+        let all_t_i_basis_form_aggregated = decompose_poly_to_basis_form(&all_t_i, basis, digits);
         println!(
             "all_t_i_basis_form_aggregated: {:?}",
             all_t_i_basis_form_aggregated
@@ -1241,48 +1256,12 @@ mod tests {
             }
         }
 
-        // decompose h_ij into basis t_1 parts
-        let h_gar_poly_basis_form: Vec<Vec<Vec<Vec<Zq>>>> = h_gar_poly
-            .iter()
-            .map(|t_i| {
-                t_i.iter()
-                    .map(|t_i_j| ring_polynomial_to_basis(t_i_j, basis, digits))
-                    .collect::<Vec<Vec<Vec<Zq>>>>()
-            })
-            .collect::<Vec<Vec<Vec<Vec<Zq>>>>>();
-        println!("h_gar_poly_basis_form: {:?}", h_gar_poly_basis_form);
-        println!("h_gar_poly[0]: {:?}", h_gar_poly[0]);
-        println!("h_gar_poly_basis_form[0]: {:?}", h_gar_poly_basis_form[0]);
-        // pick elements at each position across all inner vectors, put them into a vector
-        let mut h_gar_poly_basis_form_aggregated: Vec<Vec<Vec<PolynomialRing>>> = Vec::new();
-        for (i, h_gar_poly_i_basis_form) in h_gar_poly_basis_form.iter().enumerate() {
-            let mut row_results: Vec<Vec<PolynomialRing>> = Vec::new();
-            for (j, h_gar_poly_i_j_basis_form) in h_gar_poly_i_basis_form.iter().enumerate() {
-                let mut row_results_j: Vec<PolynomialRing> = Vec::new();
-                // Get the number of columns from the first inner vector
-                // h_gar_poly_i_j_basis_form: [[6, 1, 0], [6, 2, 0], [3, 9, 0], [8, 9, 0], [8, 3, 1], [5, 6, 0], [0, 5, 0]]
-                let num_basis_needed = h_gar_poly_i_j_basis_form.len();
-                let num_loop_needed = h_gar_poly_i_j_basis_form[0].len();
-                for k in 0..num_loop_needed {
-                    // println!("h_gar_poly_i_j_basis_form[{}][{}] = {:?}", i, j, h_gar_poly_i_j_basis_form[k]);
-                    let mut row_k: Vec<Zq> = Vec::new();
-                    for basis_needed in 0..num_basis_needed {
-                        let num_to_be_pushed = h_gar_poly_i_j_basis_form[basis_needed][k];
-                        // println!("h_gar_poly_i_j_basis_form_k[{}][{}]: {:?}", basis_needed, k, num_to_be_pushed);
-                        row_k.push(num_to_be_pushed);
-                    }
-                    row_results_j.push(PolynomialRing {
-                        coefficients: row_k,
-                    });
-                } // finish h_gar_poly_i_j_basis_form calculation
-                row_results.push(row_results_j);
-            }
-            h_gar_poly_basis_form_aggregated.push(row_results);
-        }
+        let h_gar_poly_basis_form_aggregated = decompose_poly_to_basis_form(&h_gar_poly, basis, digits);
         println!(
             "h_gar_poly_basis_form_aggregated: {:?}",
             h_gar_poly_basis_form_aggregated
         );
+
         // 5.4 u2 = sum D_ij * h_ij^(k) for all k = 1..(t1-1)
 
         // Send u2 to verifier
