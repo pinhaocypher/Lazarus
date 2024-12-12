@@ -628,7 +628,6 @@ fn generate_random_polynomial_ring(deg_bound_d: usize) -> PolynomialRing {
     }
 }
 
-
 fn decompose_poly_to_basis_form(
     poly: &Vec<Vec<PolynomialRing>>,
     basis: Zq,
@@ -637,15 +636,12 @@ fn decompose_poly_to_basis_form(
     // Decompose h_ij into basis t_1 parts
     let poly_basis_form: Vec<Vec<Vec<Vec<Zq>>>> = poly
         .iter()
-        .map(|t_i| {
-            t_i.iter()
-                .map(|t_i_j| ring_polynomial_to_basis(t_i_j, basis, digits))
+        .map(|poly_i| {
+            poly_i.iter()
+                .map(|poly_i_j| ring_polynomial_to_basis(poly_i_j, basis, digits))
                 .collect::<Vec<Vec<Vec<Zq>>>>()
         })
         .collect::<Vec<Vec<Vec<Vec<Zq>>>>>();
-    println!("poly_basis_form: {:?}", poly_basis_form);
-    println!("poly[0]: {:?}", poly[0]);
-    println!("poly_basis_form[0]: {:?}", poly_basis_form[0]);
 
     // Pick elements at each position across all inner vectors and aggregate them
     let mut poly_basis_form_aggregated: Vec<Vec<Vec<PolynomialRing>>> = Vec::new();
@@ -1263,7 +1259,6 @@ mod tests {
         );
 
         // 5.4 u2 = sum D_ij * h_ij^(k) for all k = 1..(t1-1)
-
         // Send u2 to verifier
 
         // ================================================
