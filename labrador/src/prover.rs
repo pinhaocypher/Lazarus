@@ -1084,7 +1084,7 @@ mod tests {
         // 4.3.2 calculate phi_i^{''(k)} =
         //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
         //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
-        let phi_aggr: Vec<Vec<Vec<PolynomialRing>>> = (0..size_k.value()).map(|k| {
+        let phi_ct_aggr: Vec<Vec<Vec<PolynomialRing>>> = (0..size_k.value()).map(|k| {
             (0..size_r.value()).map(|i| {
                 // Part 1: sum(psi_l^(k) * phi_constraint_ct[l][i] for all l)
                 let part1: Vec<PolynomialRing> = (0..constraint_num_l.value()).map(|l| {
@@ -1111,15 +1111,15 @@ mod tests {
                 part1.iter().zip(part2.iter()).map(|(a, b)| a.clone() + b.clone()).collect::<Vec<PolynomialRing>>()
             }).collect::<Vec<Vec<PolynomialRing>>>()
         }).collect();
-        println!("phi_aggr: {:?}", phi_aggr);
-        assert_eq!(phi_aggr.len(), size_k.value());
-        assert_eq!(phi_aggr[0].len(), size_r.value());
+        println!("phi_ct_aggr: {:?}", phi_ct_aggr);
+        assert_eq!(phi_ct_aggr.len(), size_k.value());
+        assert_eq!(phi_ct_aggr[0].len(), size_r.value());
 
         // 4.3.3 calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>)
         let b_aggr: Vec<PolynomialRing> = (0..size_k.value())
             .map(|k| {
                 let a_constraint_ct_aggr_k = &a_constraint_ct_aggr[k];
-                let phi_aggr_k = &phi_aggr[k];
+                let phi_ct_aggr_k = &phi_ct_aggr[k];
                 let mut sum = PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] };
                 for i in 0..size_r.value() {
                     for j in 0..size_r.value() {
@@ -1128,7 +1128,7 @@ mod tests {
                         sum = sum + a_ij_k_times_s_i_s_j;
                     }
                     // <phi_i^{''(k)}, s_i>
-                    let inner_product_phi_k_i_s_i = inner_product_polynomial_ring_vector(&phi_aggr_k[i], &witness_s[i]);
+                    let inner_product_phi_k_i_s_i = inner_product_polynomial_ring_vector(&phi_ct_aggr_k[i], &witness_s[i]);
                     sum = sum + inner_product_phi_k_i_s_i;
                 }
                 sum
