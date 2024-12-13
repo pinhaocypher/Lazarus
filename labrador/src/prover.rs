@@ -797,7 +797,7 @@ mod tests {
 
         // In DPCS(dot product constraint system) for constant terms(ct), there are k constraints, each constraint has a, phi and b.
         // Generate random a^(l)_{i,j}: l length vector of matrix, matrix length is r x r, each element is a Zq
-        // todo: aij == aji
+        // todo: aij == aji, refer to paper page 10
         let constraint_num_l = Zq::new(5); // Define L
         let a_constraint_ct: Vec<Vec<Vec<PolynomialRing>>> = (0..constraint_num_l.value())
             .map(|_| {
