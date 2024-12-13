@@ -1282,18 +1282,18 @@ mod tests {
                         .map(|row| {
                             row.iter()
                                 .zip(h_i_j.iter())
-                                .map(|(c, h)| c.multiply_by_polynomial_ring(h))
+                                .map(|(c, h)| c * h)
                                 .fold(
                                     PolynomialRing {
                                         coefficients: vec![Zq::from(0); size_n.value()],
                                     },
-                                    |acc, val| acc.add_polynomial_ring(&val),
+                                    |acc, val| acc + val,
                                 )
                         })
                         .collect::<Vec<PolynomialRing>>();
                     acc.iter()
                         .zip(d_i_j_k_times_h_i_j.iter())
-                        .map(|(a, b)| a.add_polynomial_ring(b))
+                        .map(|(a, b)| a + b)
                         .collect()
                 },
             );
