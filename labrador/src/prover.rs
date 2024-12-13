@@ -496,8 +496,8 @@ struct RqMatrix {
 }
 
 impl RqMatrix {
-    fn new(size_kappa: Zq, size_n: Zq) -> Self {
-        let size_kappa_usize: usize = size_kappa.value() as usize;
+    fn new(kappa: Zq, size_n: Zq) -> Self {
+        let size_kappa_usize: usize = kappa.value() as usize;
         let size_n_usize: usize = size_n.value() as usize;
         let mut rng = rand::thread_rng();
         let values = (0..size_kappa_usize)
@@ -675,6 +675,62 @@ fn decompose_poly_to_basis_form(
 }
 
 
+fn setup_matrices(
+    kappa: Zq,
+    size_n: Zq,
+    size_r: Zq,
+    t1: Zq,
+    t2: Zq,
+    kappa1: Zq,
+    kappa2: Zq,
+) -> (
+    RqMatrix,
+    Vec<Vec<RqMatrix>>,
+    Vec<Vec<Vec<RqMatrix>>>,
+    Vec<Vec<Vec<RqMatrix>>>,
+) {
+    // Initialize matrix A
+    let a_matrix = RqMatrix::new(kappa, size_n);
+
+    // Initialize matrix B
+    let b_matrix: Vec<Vec<RqMatrix>> = (0..size_r.value())
+        .map(|_i| {
+            (0..t1.value())
+                .map(|_k| RqMatrix::new(kappa1, kappa))
+                .collect()
+        })
+        .collect();
+
+    // Initialize matrix C
+    let c_matrix: Vec<Vec<Vec<RqMatrix>>> = (0..size_r.value())
+        .map(|_i| {
+            (0..size_r.value())
+                .map(|_j| {
+                    (0..t2.value())
+                        .map(|_k| RqMatrix::new(kappa2, Zq::from(1)))
+                        .collect()
+                })
+                .collect()
+        })
+        .collect();
+
+    // Initialize matrix D with the same shape as C
+    let d_matrix: Vec<Vec<Vec<RqMatrix>>> = (0..size_r.value())
+        .map(|_i| {
+            (0..size_r.value())
+                .map(|_j| {
+                    (0..t2.value())
+                        .map(|_k| RqMatrix::new(kappa2, Zq::from(1)))
+                        .collect()
+                })
+                .collect()
+        })
+        .collect();
+
+    (a_matrix, b_matrix, c_matrix, d_matrix)
+}
+
+
 // create test case for setup
 #[cfg(test)]
 mod tests {
@@ -691,10 +747,9 @@ mod tests {
         let digits = Zq::new(3); // t1
         let t1 = digits;
         let t2 = digits;
-        let kappa = size_r;
+        let kappa = Zq::new(3); // Example size
         let kappa1 = Zq::from(5);
         let kappa2 = Zq::from(5);
-        let size_kappa = Zq::new(3); // Example size
         let lambda = Zq::new(128);
         let double_lambda = lambda * Zq::new(2);
         let log_q = Zq::new(32);
@@ -702,40 +757,15 @@ mod tests {
         let beta = Zq::new(50); // Example value for beta
         // 0. setup
         // matrices A, B, C, D are common reference string
-        let a_matrix = RqMatrix::new(size_kappa, size_n);
-
-        let b_matrix: Vec<Vec<RqMatrix>> = (0..size_r.value())
-            .map(|i| {
-                (0..t1.value())
-                    .map(|k| RqMatrix::new(kappa1, kappa))
-                    .collect()
-            })
-            .collect();
-
-        let c_matrix: Vec<Vec<Vec<RqMatrix>>> = (0..size_r.value())
-            .map(|i| {
-                (0..size_r.value())
-                    .map(|j| {
-                        (0..t2.value())
-                            .map(|k| RqMatrix::new(kappa2, Zq::from(1)))
-                            .collect()
-                    })
-                    .collect()
-            })
-            .collect();
-        // D has the same shape as C
-        let d_matrix: Vec<Vec<Vec<RqMatrix>>> = (0..size_r.value())
-            .map(|i| {
-                (0..size_r.value())
-                    .map(|j| {
-                        (0..t2.value())
-                            .map(|k| RqMatrix::new(kappa2, Zq::from(1)))
-                            .collect()
-                    })
-                    .collect()
-            })
-            .collect();
-        // setup ends
+        let (a_matrix, b_matrix, c_matrix, d_matrix) = setup_matrices(
+            kappa,
+            size_n,
+            size_r,
+            t1,
+            t2,
+            kappa1,
+            kappa2,
+        );
 
         let witness_s: Vec<Vec<PolynomialRing>> = (0..size_r.value())
             .map(|_| {
@@ -852,7 +882,7 @@ mod tests {
         // print size of all_t_i
         println!("size of all_t_i: {:?}", all_t_i.len());
         // check size of all_t_i is kappa
-        assert!(all_t_i.len() == size_kappa.value());
+        assert!(all_t_i.len() == kappa.value());
 
         // ================================================
         // prover
