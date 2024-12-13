@@ -516,8 +516,8 @@ impl RqMatrix {
     }
 }
 
-// Ajtai commitment: calculate A matrix times s_i
-fn calculate_a_times_s_i(a: &RqMatrix, s_i: &Vec<PolynomialRing>) -> Vec<PolynomialRing> {
+// calculate matrix times vector of PolynomialRing
+fn matrix_times_vector_poly(a: &RqMatrix, s_i: &Vec<PolynomialRing>) -> Vec<PolynomialRing> {
     a.values
         .iter()
         .map(|row| {
@@ -807,7 +807,7 @@ mod tests {
         assert!(a_matrix.values[0].len() == size_n.value());
         let mut all_t_i = Vec::new();
         for s_i in &witness_s {
-            let t_i = calculate_a_times_s_i(&a_matrix, &s_i);
+            let t_i = matrix_times_vector_poly(&a_matrix, &s_i);
             println!("size of t_i: {:?}", t_i.len());
             all_t_i.push(t_i);
         }
@@ -1351,7 +1351,7 @@ mod tests {
                 coefficients: vec![Zq::from(3), Zq::from(4)],
             },
         ];
-        let result = calculate_a_times_s_i(&a, &s_i);
+        let result = matrix_times_vector_poly(&a, &s_i);
         assert_eq!(result.len(), a.values.len() * s_i.len()); // Check that the result length is correct
     }
 
