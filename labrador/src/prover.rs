@@ -1291,8 +1291,15 @@ mod tests {
         // ================================================
 
         // 6. GOAL: calculate z (Amortized Opening)
-        // 6.1 c_i is randomly chosen from C
+        // 6.1 c_i is randomly chosen from C, i = 1..r
+        let c_challenge: Vec<Vec<Zq>> = (0..size_r.value()).map(|_| (0..size_n.value()).map(|_| Zq::new(rng.gen_range(0..10))).collect()).collect();
         // 6.2 calculate z = sum(c_i * s_i) for all i = 1..r
+        let z: Vec<PolynomialRing> = (0..size_r.value()).map(|i| {
+            let c_i = &c_challenge[i];
+            let s_i = &witness_s[i];
+            c_i.iter().zip(s_i.iter()).map(|(c, s)| s * *c).fold(PolynomialRing { coefficients: vec![Zq::from(0); size_n.value()] }, |acc, x| acc + x)
+        }).collect();
+        println!("z: {:?}", z);
         // Send z, t_i, g_ij, h_ij to verifier
     }
 
