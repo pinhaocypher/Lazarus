@@ -1,42 +1,7 @@
 use profiler_macro::time_profiler;
 use rand::Rng;
-use std::ops::Mul;
-use std::ops::Add;
-use std::ops::Sub;
-use std::ops::Div;
-use std::ops::Rem;
-use std::fmt::Display;
-use std::iter::Sum;
-use std::ops::AddAssign;
-use std::cmp::PartialEq;
-
-pub fn setup() {
-    // 0. setup
-    // public parameters after setup: [a_ij^(k), a_ij^(l), phi^(k), phi^(l), b^(k), b0(l)']
-
-    // 1. setup constraints
-    // 1.1 get s_i and do norm check
-    // 1.1.1 get s_i = s_1 - s_r; r is the number of witness s
-    // each s_i is a vector of ring elements
-
-    // 1.1.2 get beta norm bound, refer paper page 26, theorem 6.3
-
-    // 1.1.3 do check: sum of s_i norm <= beta_square
-
-    // 1.2 calculate b^(k)
-    // 1.2.1 calculate dot product ss = a_ij * <s_i, s_j> for all i, j
-    // a_ij is the quadratic coefficient, phi^(k) is the linear coefficient
-    // 1.2.2 calculate phi_s = <phi^(k), s_i> for all i
-    // 1.2.3 calculate b^(k) = sum(ss) + sum(phi_s)
-
-    // 1.3 calculate b'^(l)
-    // 1.3.1 calculate dot product ss = a_ij' * <s_i, s_j> for all i, j
-    // a_ij' is the quadratic coefficient, phi^(l)' is the linear coefficient
-    // 1.3.2 calculate phi_s = <phi^(l)', s_i> for all i
-    // 1.3.3 calculate b'^(l) = sum(ss) + sum(phi_s)
-
-    // L = |F'| = ceiling(128 / logQ)
-}
+use crate::setup::setup;
+use crate::algebra::{PolynomialRing, RqMatrix, Zq};
 
 #[time_profiler()]
 pub fn prove() {
@@ -95,347 +60,6 @@ pub fn prove() {
     // Send z, t_i, g_ij, h_ij to verifier
 }
 
-// Assuming you have a PolynomialRing type defined
-#[derive(Debug, Clone)]
-struct PolynomialRing {
-    coefficients: Vec<Zq>,
-}
-
-impl PolynomialRing {
-    const DEGREE_BOUND: usize = 64;
-
-    fn new(coefficients: Vec<Zq>) -> Self {
-        // Ensure coefficients are in Zq and degree is less than 64
-        assert!(coefficients.len() <= Self::DEGREE_BOUND, "Polynomial degree must be less than 64");
-        PolynomialRing { coefficients: coefficients.clone() }
-    }
-    // Multiply two polynomials in R = Zq[X]/(X^64 + 1)
-    fn multiply_by_polynomial_ring(&self, other: &PolynomialRing) -> PolynomialRing {
-        // Initialize a vector to hold the intermediate multiplication result
-        let mut result_coefficients =
-            vec![Zq::new(0); self.coefficients.len() + other.coefficients.len() - 1];
-        for (i, coeff1) in self.coefficients.iter().enumerate() {
-            for (j, coeff2) in other.coefficients.iter().enumerate() {
-                result_coefficients[i + j] = result_coefficients[i + j] + (*coeff1 * *coeff2);
-            }
-        }
-
-        // Reduce modulo X^64 + 1
-        if result_coefficients.len() > Self::DEGREE_BOUND {
-            let modulus_minus_one = Zq::from(Zq::modulus() - 1);
-            for i in Self::DEGREE_BOUND..result_coefficients.len() {
-                let overflow = result_coefficients[i].clone();
-                result_coefficients[i - Self::DEGREE_BOUND] = result_coefficients[i - Self::DEGREE_BOUND].clone() + (overflow * modulus_minus_one);
-            }
-            result_coefficients.truncate(Self::DEGREE_BOUND);
-        }
-        PolynomialRing {
-            coefficients: result_coefficients,
-        }
-    }
-
-    fn add_polynomial_ring(&self, other: &PolynomialRing) -> PolynomialRing {
-        let max_len = std::cmp::max(self.coefficients.len(), other.coefficients.len());
-        let mut result_coefficients = Vec::with_capacity(max_len);
-        for i in 0..max_len {
-            let a = if i < self.coefficients.len() {
-                self.coefficients[i]
-            } else {
-                Zq::new(0)
-            };
-            let b = if i < other.coefficients.len() {
-                other.coefficients[i]
-            } else {
-                Zq::new(0)
-            };
-            result_coefficients.push(a + b);
-        }
-        PolynomialRing {
-            coefficients: result_coefficients,
-        }
-    }
-}
-
-impl Mul for PolynomialRing {
-    type Output = PolynomialRing;
-
-    fn mul(self, other: PolynomialRing) -> PolynomialRing {
-        self.multiply_by_polynomial_ring(&other)
-    }
-}
-
-impl Mul<&PolynomialRing> for PolynomialRing {
-    type Output = PolynomialRing;
-
-    fn mul(self, other: &PolynomialRing) -> PolynomialRing {
-        self.multiply_by_polynomial_ring(other)
-    }
-}
-
-impl Mul<PolynomialRing> for &PolynomialRing {
-    type Output = PolynomialRing;
-
-    fn mul(self, other: PolynomialRing) -> PolynomialRing {
-        self.multiply_by_polynomial_ring(&other)
-    }
-}
-
-impl Mul<&PolynomialRing> for &PolynomialRing {
-    type Output = PolynomialRing;
-
-    fn mul(self, other: &PolynomialRing) -> PolynomialRing {
-        self.multiply_by_polynomial_ring(other)
-    }
-}
-
-impl Mul<Zq> for PolynomialRing {
-    type Output = PolynomialRing;
-
-    fn mul(self, other: Zq) -> PolynomialRing {
-        let new_coefficients = self
-            .coefficients
-            .iter()
-            .map(|c| *c * other)
-            .collect();
-        PolynomialRing {
-            coefficients: new_coefficients,
-        }
-    }
-}
-
-impl Mul<Zq> for &PolynomialRing {
-    type Output = PolynomialRing;
-
-    fn mul(self, other: Zq) -> PolynomialRing {
-        let new_coefficients = self
-            .coefficients
-            .iter()
-            .map(|c| *c * other)
-            .collect();
-        PolynomialRing {
-            coefficients: new_coefficients,
-        }
-    }
-}
-
-impl Div<Zq> for PolynomialRing {
-    type Output = PolynomialRing;
-
-    fn div(self, other: Zq) -> PolynomialRing {
-        let new_coefficients = self
-            .coefficients
-            .iter()
-            .map(|c| Zq::new(c.value() / other.value()))
-            .collect();
-        PolynomialRing {
-            coefficients: new_coefficients,
-        }
-    }
-}
-
-impl Add for PolynomialRing {
-    type Output = PolynomialRing;
-
-    fn add(self, other: PolynomialRing) -> PolynomialRing {
-        self.add_polynomial_ring(&other)
-    }
-}
-
-impl Add<&PolynomialRing> for PolynomialRing {
-    type Output = PolynomialRing;
-
-    fn add(self, other: &PolynomialRing) -> PolynomialRing {
-        self.add_polynomial_ring(other)
-    }
-}
-
-impl Add<PolynomialRing> for &PolynomialRing {
-    type Output = PolynomialRing;
-
-    fn add(self, other: PolynomialRing) -> PolynomialRing {
-        self.add_polynomial_ring(&other)
-    }
-}
-
-impl Add<&PolynomialRing> for &PolynomialRing {
-    type Output = PolynomialRing;
-
-    fn add(self, other: &PolynomialRing) -> PolynomialRing {
-        self.add_polynomial_ring(other)
-    }
-}
-
-impl Add<Zq> for PolynomialRing {
-    type Output = PolynomialRing;
-
-    fn add(self, other: Zq) -> PolynomialRing {
-        let mut new_coefficients = self.coefficients.clone();
-        if let Some(first) = new_coefficients.get_mut(0) {
-            *first = *first + other;
-        } else {
-            new_coefficients.push(other);
-        }
-        PolynomialRing {
-            coefficients: new_coefficients,
-        }
-    }
-}
-
-impl Add<&Zq> for PolynomialRing {
-    type Output = PolynomialRing;
-
-    fn add(self, other: &Zq) -> PolynomialRing {
-        let mut new_coefficients = self.coefficients.clone();
-        if let Some(first) = new_coefficients.get_mut(0) {
-            *first = *first + *other;
-        } else {
-            new_coefficients.push(*other);
-        }
-        PolynomialRing {
-            coefficients: new_coefficients,
-        }
-    }
-}
-
-impl Add<Zq> for &PolynomialRing {
-    type Output = PolynomialRing;
-
-    fn add(self, other: Zq) -> PolynomialRing {
-        let mut new_coefficients = self.coefficients.clone();
-        if let Some(first) = new_coefficients.get_mut(0) {
-            *first = *first + other;
-        } else {
-            new_coefficients.push(other);
-        }
-        PolynomialRing {
-            coefficients: new_coefficients,
-        }
-    }
-}
-
-impl Add<&Zq> for &PolynomialRing {
-    type Output = PolynomialRing;
-
-    fn add(self, other: &Zq) -> PolynomialRing {
-        let mut new_coefficients = self.coefficients.clone();
-        if let Some(first) = new_coefficients.get_mut(0) {
-            *first = *first + *other;
-        } else {
-            new_coefficients.push(*other);
-        }
-        PolynomialRing {
-            coefficients: new_coefficients,
-        }
-    }
-}
-
-impl PartialEq for PolynomialRing {
-    fn eq(&self, other: &Self) -> bool {
-        // Compare coefficients, ignoring trailing zeros
-        let self_coeffs = self.coefficients.iter().rev().skip_while(|&&x| x == Zq::from(0)).collect::<Vec<_>>();
-        let other_coeffs = other.coefficients.iter().rev().skip_while(|&&x| x == Zq::from(0)).collect::<Vec<_>>();
-
-        self_coeffs == other_coeffs
-    }
-}
-
-// Let q be a modulus, and let Zq be the ring of integers mod q
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Zq {
-    value: usize,
-}
-
-impl Zq {
-    const Q: usize = 2usize.pow(32);
-
-    fn modulus() -> usize {
-        Self::Q
-    }
-    fn new(value: usize) -> Self {
-        Zq { value: value % Self::Q }
-    }
-
-    fn value(&self) -> usize {
-        self.value
-    }
-
-    fn pow(&self, other: usize) -> Self {
-        Zq::new(self.value.pow(other as u32))
-    }
-}
-
-impl PartialOrd for Zq {
-    fn partial_cmp(&self, other: &Zq) -> Option<std::cmp::Ordering> {
-        Some(self.value.cmp(&other.value))
-    }
-}
-
-impl Display for Zq {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.value)
-    }
-}
-
-impl Rem for Zq {
-    type Output = Zq;
-
-    fn rem(self, other: Zq) -> Zq {
-        Zq::new(self.value % other.value)
-    }
-}
-
-impl Div for Zq {
-    type Output = Zq;
-
-    fn div(self, other: Zq) -> Zq {
-        Zq::new(self.value() / other.value())
-    }
-}
-
-impl Add for Zq {
-    type Output = Zq;
-
-    fn add(self, other: Zq) -> Zq {
-        Zq::new(self.value + other.value)
-    }
-}
-
-impl AddAssign for Zq {
-    fn add_assign(&mut self, other: Zq) {
-        self.value = (self.value + other.value) % Self::Q;
-    }
-}
-
-
-impl Sub for Zq {
-    type Output = Zq;
-
-    fn sub(self, other: Zq) -> Zq {
-        Zq::new((self.value + Self::Q) - other.value)
-    }
-}
-
-impl Mul for Zq {
-    type Output = Zq;
-
-    fn mul(self, other: Zq) -> Zq {
-        Zq::new(self.value * other.value)
-    }
-}
-
-impl From<usize> for Zq {
-    fn from(value: usize) -> Self {
-        Zq::new(value)
-    }
-}
-
-impl Sum for Zq {
-    fn sum<I: Iterator<Item = Zq>>(iter: I) -> Self {
-        iter.fold(Zq::new(0), |acc, x| acc + x)
-    }
-}
-
-
 
 // inner product of 2 vectors of PolynomialRing
 fn inner_product_polynomial_ring_vector(
@@ -444,10 +68,10 @@ fn inner_product_polynomial_ring_vector(
 ) -> PolynomialRing {
     a.iter()
         .zip(b.iter())
-        .map(|(a, b)| a.multiply_by_polynomial_ring(b))
+        .map(|(a, b)| a * b)
         .collect::<Vec<PolynomialRing>>()
         .into_iter()
-        .reduce(|acc, x| acc.add_polynomial_ring(&x))
+        .reduce(|acc, x| acc + x)
         .unwrap()
 }
 
@@ -457,7 +81,6 @@ fn inner_product_zq_vector(a: &Vec<Zq>, b: &Vec<Zq>) -> Zq {
         .map(|(a, b)| *a * *b)
         .sum()
 }
-
 
 // Function to calculate b^(k)
 fn calculate_b_constraint(
@@ -479,40 +102,15 @@ fn calculate_b_constraint(
             // Calculate inner product and update b
             let inner_product_si_sj = inner_product_polynomial_ring_vector(&elem_s_i, &elem_s_j);
             let a_constr = &a_constraint[i][j];
-            b = b.add_polynomial_ring(&inner_product_si_sj.multiply_by_polynomial_ring(a_constr));
+            b = b + (inner_product_si_sj * a_constr);
         }
         // calculate inner product of s[i] and phi
         for (x, y) in s[i].iter().zip(phi_constraint[i].iter()) {
-            b = b.add_polynomial_ring(&x.multiply_by_polynomial_ring(y));
+            b = b + (x * y);
         }
     }
 
     b
-}
-
-#[derive(Debug)]
-struct RqMatrix {
-    values: Vec<Vec<PolynomialRing>>, // matrix of PolynomialRing values
-}
-
-impl RqMatrix {
-    fn new(kappa: Zq, size_n: Zq) -> Self {
-        let size_kappa_usize: usize = kappa.value() as usize;
-        let size_n_usize: usize = size_n.value() as usize;
-        let mut rng = rand::thread_rng();
-        let values = (0..size_kappa_usize)
-            .map(|_| {
-                (0..size_n_usize)
-                    .map(|_| PolynomialRing {
-                        coefficients: (0..size_n_usize)
-                            .map(|_| Zq::from(rng.gen_range(1..10)))
-                            .collect(),
-                    })
-                    .collect()
-            })
-            .collect();
-        RqMatrix { values }
-    }
 }
 
 // calculate matrix times vector of PolynomialRing
@@ -522,7 +120,7 @@ fn matrix_times_vector_poly(a: &RqMatrix, s_i: &Vec<PolynomialRing>) -> Vec<Poly
         .map(|row| {
             row.iter()
                 .zip(s_i.iter())
-                .map(|(a, b)| a.multiply_by_polynomial_ring(b))
+                .map(|(a, b)| a * b)
                 .collect::<Vec<PolynomialRing>>()
         })
         .collect::<Vec<Vec<PolynomialRing>>>()
@@ -674,63 +272,6 @@ fn decompose_poly_to_basis_form(
     poly_basis_form_aggregated
 }
 
-
-fn setup_matrices(
-    kappa: Zq,
-    size_n: Zq,
-    size_r: Zq,
-    t1: Zq,
-    t2: Zq,
-    kappa1: Zq,
-    kappa2: Zq,
-) -> (
-    RqMatrix,
-    Vec<Vec<RqMatrix>>,
-    Vec<Vec<Vec<RqMatrix>>>,
-    Vec<Vec<Vec<RqMatrix>>>,
-) {
-    // Initialize matrix A
-    let a_matrix = RqMatrix::new(kappa, size_n);
-
-    // Initialize matrix B
-    let b_matrix: Vec<Vec<RqMatrix>> = (0..size_r.value())
-        .map(|_i| {
-            (0..t1.value())
-                .map(|_k| RqMatrix::new(kappa1, kappa))
-                .collect()
-        })
-        .collect();
-
-    // Initialize matrix C
-    let c_matrix: Vec<Vec<Vec<RqMatrix>>> = (0..size_r.value())
-        .map(|_i| {
-            (0..size_r.value())
-                .map(|_j| {
-                    (0..t2.value())
-                        .map(|_k| RqMatrix::new(kappa2, Zq::from(1)))
-                        .collect()
-                })
-                .collect()
-        })
-        .collect();
-
-    // Initialize matrix D with the same shape as C
-    let d_matrix: Vec<Vec<Vec<RqMatrix>>> = (0..size_r.value())
-        .map(|_i| {
-            (0..size_r.value())
-                .map(|_j| {
-                    (0..t2.value())
-                        .map(|_k| RqMatrix::new(kappa2, Zq::from(1)))
-                        .collect()
-                })
-                .collect()
-        })
-        .collect();
-
-    (a_matrix, b_matrix, c_matrix, d_matrix)
-}
-
-
 // create test case for setup
 #[cfg(test)]
 mod tests {
@@ -757,12 +298,12 @@ mod tests {
         let beta = Zq::new(50); // Example value for beta
         // 0. setup
         // matrices A, B, C, D are common reference string
-        let (a_matrix, b_matrix, c_matrix, d_matrix) = setup_matrices(
-            kappa,
+        let (a_matrix, b_matrix, c_matrix, d_matrix) = setup(
             size_n,
             size_r,
             t1,
             t2,
+            kappa,
             kappa1,
             kappa2,
         );
@@ -971,19 +512,19 @@ mod tests {
                     .map(|row| {
                         row.iter()
                             .zip(t_i_k.iter())
-                            .map(|(b, t)| b.multiply_by_polynomial_ring(t))
+                            .map(|(b, t)| b * t)
                             .fold(
                                 PolynomialRing {
                                     coefficients: vec![Zq::from(0); size_n.value()],
                                 },
-                                |acc, val| acc.add_polynomial_ring(&val),
+                                |acc, val| acc + val,
                             )
                     })
                     .collect::<Vec<PolynomialRing>>();
                 u1 = u1
                     .iter()
                     .zip(b_ik_times_t_ik.iter())
-                    .map(|(a, b)| a.add_polynomial_ring(b))
+                    .map(|(a, b)| a + b)
                     .collect();
             }
         }
@@ -1002,19 +543,19 @@ mod tests {
                         .map(|row| {
                             row.iter()
                                 .zip(g_i_j.iter())
-                                .map(|(c, g)| c.multiply_by_polynomial_ring(g))
+                                .map(|(c, g)| c * g)
                                 .fold(
                                     PolynomialRing {
                                         coefficients: vec![Zq::from(0); size_n.value()],
                                     },
-                                    |acc, val| acc.add_polynomial_ring(&val),
+                                    |acc, val| acc + val,
                                 )
                         })
                         .collect::<Vec<PolynomialRing>>();
                     u1 = u1
                         .iter()
                         .zip(c_i_j_k_times_g_i_j.iter())
-                        .map(|(a, b)| a.add_polynomial_ring(b))
+                        .map(|(a, b)| a + b)
                         .collect();
                 }
             }
@@ -1350,7 +891,7 @@ mod tests {
         let poly2 = PolynomialRing {
             coefficients: vec![Zq::from(3), Zq::from(4)],
         };
-        let result = poly1.multiply_by_polynomial_ring(&poly2);
+        let result = poly1 * poly2;
         assert_eq!(result.coefficients, vec![Zq::from(3), Zq::from(10), Zq::from(8)]); // 1*3, 1*4 + 2*3, 2*4
     }
     #[test]
