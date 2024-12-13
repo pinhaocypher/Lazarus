@@ -843,6 +843,8 @@ mod tests {
 
         let basis = Zq::new(10);
         let digits = Zq::new(3); // t1
+        let t1 = digits;
+        let t2 = digits;
 
         let all_t_i_basis_form_aggregated = decompose_poly_to_basis_form(&all_t_i, basis, digits);
         println!(
@@ -875,46 +877,9 @@ mod tests {
         }
         println!("g_matrix: {:?}", g_matrix);
 
-        // let basis = 10;
-        // let digits = 3; // t1
-        let g_matrix_basis_form: Vec<Vec<Vec<Vec<Zq>>>> = g_matrix
-            .iter()
-            .map(|g_i| {
-                g_i.iter()
-                    .map(|g_i_j| ring_polynomial_to_basis(g_i_j, basis, digits))
-                    .collect::<Vec<Vec<Vec<Zq>>>>()
-            })
-            .collect::<Vec<Vec<Vec<Vec<Zq>>>>>();
-        println!("g_matrix_basis_form: {:?}", g_matrix_basis_form);
-        // Sum elements at each position across all inner vectors, get t_i and put them into a matrix
-        // g is a matrix, each element is a Vec<Rq>(Vec<PolynomialRing>)
-        let mut g_matrix_aggregated: Vec<Vec<Vec<PolynomialRing>>> = Vec::new();
-        for (i, g_i_basis_form) in g_matrix_basis_form.iter().enumerate() {
-            let mut row_results: Vec<Vec<PolynomialRing>> = Vec::new();
-            for (j, g_i_j_basis_form) in g_i_basis_form.iter().enumerate() {
-                let mut row_results_j: Vec<PolynomialRing> = Vec::new();
-                // Get the number of columns from the first inner vector
-                // t_i_j_basis_form: [[6, 1, 0], [6, 2, 0], [3, 9, 0], [8, 9, 0], [8, 3, 1], [5, 6, 0], [0, 5, 0]]
-                let num_basis_needed = g_i_j_basis_form.len();
-                let num_loop_needed = g_i_j_basis_form[0].len();
-                for k in 0..num_loop_needed {
-                    // println!("t_i_j_basis_form[{}][{}] = {:?}", i, j, t_i_j_basis_form[k]);
-                    let mut row_k: Vec<Zq> = Vec::new();
-                    for basis_needed in 0..num_basis_needed {
-                        let num_to_be_pushed = g_i_j_basis_form[basis_needed][k];
-                        // println!("t_i_j_basis_form_k[{}][{}]: {:?}", basis_needed, k, num_to_be_pushed);
-                        row_k.push(num_to_be_pushed);
-                    }
-                    row_results_j.push(PolynomialRing {
-                        coefficients: row_k,
-                    });
-                } // finish t_i_j_basis_form calculation
-                row_results.push(row_results_j);
-            }
-            g_matrix_aggregated.push(row_results);
-        }
-
+        let g_matrix_aggregated = decompose_poly_to_basis_form(&g_matrix, basis, t2);
         println!("g_matrix_aggregated: {:?}", g_matrix_aggregated);
+
         // 2.3 calculate u1
         // 2.3.1 B & C is randomly chosen similar to A
         let size_b = [Zq::from(3), Zq::from(5)];
@@ -923,8 +888,6 @@ mod tests {
         let c_matrix = RqMatrix::new(size_c[0], size_c[1]);
         // 2.3.2 calculate u1 = sum(B_ik * t_i^(k)) + sum(C_ijk * g_ij^(k))
         // Define necessary variables
-        let t1 = digits;
-        let t2 = digits;
         let B = &b_matrix.values;
         let C = &c_matrix.values;
         let t = &all_t_i_basis_form_aggregated;
