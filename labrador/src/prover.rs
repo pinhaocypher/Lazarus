@@ -1247,7 +1247,6 @@ mod tests {
         );
 
         // 5.4 u2 = sum D_ij * h_ij^(k) for all k = 1..(t1-1)
-        // Send u2 to verifier
         let u2 = (0..size_r.value())
             .flat_map(|i| {
                 (i..size_r.value()).flat_map(move |j| {
@@ -1288,6 +1287,9 @@ mod tests {
 
         println!("u2: {:?}", u2);
 
+        // Send u2 to verifier
+        // transcript.add(u2)
+
         // ================================================
 
         // 6. GOAL: calculate z (Amortized Opening)
@@ -1300,7 +1302,10 @@ mod tests {
             c_i.iter().zip(s_i.iter()).map(|(c, s)| s * *c).fold(PolynomialRing { coefficients: vec![Zq::from(0); size_n.value()] }, |acc, x| acc + x)
         }).collect();
         println!("z: {:?}", z);
+
         // Send z, t_i, g_ij, h_ij to verifier
+        // transcript.add(z);
+        // return transcript;
     }
 
     #[test]
