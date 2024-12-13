@@ -580,6 +580,7 @@ fn generate_gaussian_distribution(nd: Zq) -> Vec<Vec<Zq>> {
         for j in 0..nd_usize {
             let random_value: f32 = rng.gen(); // Generate a random float between 0 and 1
             matrix[i][j] = if random_value < 0.25 {
+                // todo: should we use symmetric distribution from -q/2 to q/2?
                 Zq::from(modulus - 1) // 1/4 probability
             } else if random_value < 0.75 {
                 Zq::from(0) // 1/2 probability
@@ -1296,6 +1297,7 @@ mod tests {
 
         // 6. GOAL: calculate z (Amortized Opening)
         // 6.1 c_i is randomly chosen from C, i = 1..r
+        // todo: get c from challenge space, refer to paper page 6
         let c_challenge: Vec<Vec<Zq>> = (0..size_r.value()).map(|_| (0..size_n.value()).map(|_| Zq::new(rng.gen_range(0..10))).collect()).collect();
         // 6.2 calculate z = sum(c_i * s_i) for all i = 1..r
         let z: Vec<PolynomialRing> = (0..size_r.value()).map(|i| {
