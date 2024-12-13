@@ -1247,6 +1247,58 @@ mod tests {
 
         // 5.4 u2 = sum D_ij * h_ij^(k) for all k = 1..(t1-1)
         // Send u2 to verifier
+        // D has the same shape as C
+        let d_matrix: Vec<Vec<Vec<RqMatrix>>> = (0..size_r.value())
+            .map(|i| {
+                (0..size_r.value())
+                    .map(|j| {
+                        (0..t2.value())
+                            .map(|k| RqMatrix::new(kappa2, Zq::from(1)))
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect();
+
+        let u2 = (0..size_r.value())
+            .flat_map(|i| {
+                (i..size_r.value()).flat_map(move |j| {
+                    (0..t2.value()).map(move |k| (i, j, k))
+                })
+            })
+            .fold(
+                vec![
+                    PolynomialRing {
+                        coefficients: vec![Zq::from(0); deg_bound_d.value()]
+                    };
+                    kappa2.value()
+                ],
+                |acc, (i, j, k)| {
+                    println!("i: {}, j: {}, k: {}", i, j, k);
+                    let d_i_j_k = &d_matrix[i][j][k];
+                    let h_i_j = &h_gar_poly_basis_form_aggregated[i][j];
+                    let d_i_j_k_times_h_i_j = d_i_j_k.values
+                        .iter()
+                        .map(|row| {
+                            row.iter()
+                                .zip(h_i_j.iter())
+                                .map(|(c, h)| c.multiply_by_polynomial_ring(h))
+                                .fold(
+                                    PolynomialRing {
+                                        coefficients: vec![Zq::from(0); size_n.value()],
+                                    },
+                                    |acc, val| acc.add_polynomial_ring(&val),
+                                )
+                        })
+                        .collect::<Vec<PolynomialRing>>();
+                    acc.iter()
+                        .zip(d_i_j_k_times_h_i_j.iter())
+                        .map(|(a, b)| a.add_polynomial_ring(b))
+                        .collect()
+                },
+            );
+
+        println!("u2: {:?}", u2);
 
         // ================================================
 
