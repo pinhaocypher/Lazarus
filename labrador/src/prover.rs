@@ -469,7 +469,6 @@ fn calculate_b_constraint(
         coefficients: vec![Zq::from(0)],
     };
     let s_len_usize = s.len();
-    let s_len = Zq::from(s_len_usize);
 
     // Calculate b^(k)
     for i in 0..s_len_usize {
@@ -829,10 +828,13 @@ mod tests {
         assert_eq!(phi_constraint_ct[0][0].len(), size_n.value());
 
         // calculate b^(l)
-        // todo: only need to keep constant term?
-        let b_constraint_ct: Vec<PolynomialRing> = (0..constraint_num_l.value())
+        let b_constraint_poly: Vec<PolynomialRing> = (0..constraint_num_l.value())
             .map(|l| calculate_b_constraint(&witness_s, &a_constraint_ct[l], &phi_constraint_ct[l]))
             .collect();
+        // only keep constant term
+        let b_constraint_ct: Vec<Zq> = (0..constraint_num_l.value()).map(|l| {
+            b_constraint_poly[l].coefficients[0]
+        }).collect();
         println!("b_constraint_ct: {:?}", b_constraint_ct);
 
         // let size_n = 5;
@@ -1171,7 +1173,7 @@ mod tests {
             // sum(psi_l^(k) * b_0^{'(l)}) for all l = 1..L
             let mut b_k_0_computed: Zq = (0..constraint_num_l.value()).map(|l| {
                 let psi_k_l = psi_challenge[k][l];
-                let b_l_0 = b_constraint_ct[l].coefficients[0];
+                let b_l_0 = b_constraint_ct[l];
                 psi_k_l * b_l_0
             }).sum();
             // <⟨omega^(k),p⟩>
