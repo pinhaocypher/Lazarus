@@ -684,14 +684,59 @@ mod tests {
 
     #[test]
     fn test_setup_prover() {
+        // s is a vector of size r. each s_i is a PolynomialRing<Zq> with n coefficients
+        let size_r = Zq::new(3); // r: Number of witness elements
+        let size_n = Zq::new(5); // n
+        let basis = Zq::new(10);
+        let digits = Zq::new(3); // t1
+        let t1 = digits;
+        let t2 = digits;
+        let kappa = size_r;
+        let kappa1 = Zq::from(5);
+        let kappa2 = Zq::from(5);
+        let size_kappa = Zq::new(3); // Example size
         let lambda = Zq::new(128);
         let double_lambda = lambda * Zq::new(2);
         let log_q = Zq::new(32);
         let deg_bound_d = Zq::new(8); // random polynomial degree bound
-        // s is a vector of size r. each s_i is a PolynomialRing<Zq> with n coefficients
-        let size_r = Zq::new(3); // r: Number of witness elements
-        let size_n = Zq::new(5); // n
         let beta = Zq::new(50); // Example value for beta
+        // 0. setup
+        // matrices A, B, C, D are common reference string
+        let a_matrix = RqMatrix::new(size_kappa, size_n);
+
+        let b_matrix: Vec<Vec<RqMatrix>> = (0..size_r.value())
+            .map(|i| {
+                (0..t1.value())
+                    .map(|k| RqMatrix::new(kappa1, kappa))
+                    .collect()
+            })
+            .collect();
+
+        let c_matrix: Vec<Vec<Vec<RqMatrix>>> = (0..size_r.value())
+            .map(|i| {
+                (0..size_r.value())
+                    .map(|j| {
+                        (0..t2.value())
+                            .map(|k| RqMatrix::new(kappa2, Zq::from(1)))
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect();
+        // D has the same shape as C
+        let d_matrix: Vec<Vec<Vec<RqMatrix>>> = (0..size_r.value())
+            .map(|i| {
+                (0..size_r.value())
+                    .map(|j| {
+                        (0..t2.value())
+                            .map(|k| RqMatrix::new(kappa2, Zq::from(1)))
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect();
+        // setup ends
+
         let witness_s: Vec<Vec<PolynomialRing>> = (0..size_r.value())
             .map(|_| {
                 (0..size_n.value())
@@ -790,21 +835,10 @@ mod tests {
             .collect();
         println!("b_constraint_ct: {:?}", b_constraint_ct);
 
-        let size_kappa = Zq::new(3); // Example size
         // let size_n = 5;
         // A: matrix size: kappa * n, each element is PolynomialRing(R_q)
         // calculate t_i = A * s_i for all i = 1..r
         // size of t_i = (kappa * n)R_q * 1R_q = kappa * n
-        let a_matrix = RqMatrix::new(size_kappa, size_n);
-        println!("A: {:?}", a_matrix);
-        // print size of A
-        println!(
-            "size of A: {:?} x {:?}",
-            a_matrix.values.len(),
-            a_matrix.values[0].len()
-        );
-        assert!(a_matrix.values.len() == size_kappa.value());
-        assert!(a_matrix.values[0].len() == size_n.value());
         let mut all_t_i = Vec::new();
         for s_i in &witness_s {
             let t_i = matrix_times_vector_poly(&a_matrix, &s_i);
@@ -840,11 +874,6 @@ mod tests {
             // [[4, 2, 0], [0, 4, 0], [0, 0, 1], [5, 8, 0], [1, 2, 1], [7, 5, 0], [6, 5, 0]]
             // [[4, 1, 0], [7, 3, 0], [1, 9, 0], [8, 1, 1], [9, 5, 1], [9, 0, 1], [2, 7, 0]]
         // ]
-
-        let basis = Zq::new(10);
-        let digits = Zq::new(3); // t1
-        let t1 = digits;
-        let t2 = digits;
 
         let all_t_i_basis_form_aggregated = decompose_poly_to_basis_form(&all_t_i, basis, digits);
         println!(
@@ -884,42 +913,13 @@ mod tests {
         // 2.3.1 B & C is randomly chosen similar to A
         let size_b = [Zq::from(3), Zq::from(5)];
         let size_c = [Zq::from(3), Zq::from(5)];
-        let b_matrix = RqMatrix::new(size_b[0], size_b[1]);
-        let c_matrix = RqMatrix::new(size_c[0], size_c[1]);
         // 2.3.2 calculate u1 = sum(B_ik * t_i^(k)) + sum(C_ijk * g_ij^(k))
         // Define necessary variables
-        let B = &b_matrix.values;
-        let C = &c_matrix.values;
         let t = &all_t_i_basis_form_aggregated;
-        let kappa = size_r;
-        let kappa1 = Zq::from(5);
-        let kappa2 = Zq::from(5);
 
         // B_ik: Rq^{kappa1 x kappa}, t_i: Rq^{kappa}, t_i^(k): Rq^{kappa}
         // B_ik * t_i^(k): Rq^{kappa1}
         // First summation: ∑ B_ik * t_i^(k), 1 ≤ i ≤ r, 0 ≤ k ≤ t1−1
-        // Generate b_matrix first
-        let b_matrix: Vec<Vec<RqMatrix>> = (0..size_r.value())
-            .map(|i| {
-                (0..t1.value())
-                    .map(|k| RqMatrix::new(kappa1, kappa))
-                    .collect()
-            })
-            .collect();
-
-        // Generate all C matrices first
-        let c_matrix: Vec<Vec<Vec<RqMatrix>>> = (0..size_r.value())
-            .map(|i| {
-                (0..size_r.value())
-                    .map(|j| {
-                        (0..t2.value())
-                            .map(|k| RqMatrix::new(kappa2, Zq::from(1)))
-                            .collect()
-                    })
-                    .collect()
-            })
-            .collect();
-
         // Initialize u1 with zeros with size kappa1, each element is a polynomial ring
         let mut u1 = vec![
             PolynomialRing {
@@ -1248,19 +1248,6 @@ mod tests {
 
         // 5.4 u2 = sum D_ij * h_ij^(k) for all k = 1..(t1-1)
         // Send u2 to verifier
-        // D has the same shape as C
-        let d_matrix: Vec<Vec<Vec<RqMatrix>>> = (0..size_r.value())
-            .map(|i| {
-                (0..size_r.value())
-                    .map(|j| {
-                        (0..t2.value())
-                            .map(|k| RqMatrix::new(kappa2, Zq::from(1)))
-                            .collect()
-                    })
-                    .collect()
-            })
-            .collect();
-
         let u2 = (0..size_r.value())
             .flat_map(|i| {
                 (i..size_r.value()).flat_map(move |j| {
