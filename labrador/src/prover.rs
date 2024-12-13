@@ -894,13 +894,7 @@ mod tests {
         let kappa = size_r;
         let kappa1 = Zq::from(5);
         let kappa2 = Zq::from(5);
-        // Initialize u1 with zeros with size kappa1, each element is a polynomial ring
-        let mut u1 = vec![
-            PolynomialRing {
-                coefficients: vec![Zq::from(0); size_n.value()]
-            };
-            kappa1.value()
-        ];
+
         // B_ik: Rq^{kappa1 x kappa}, t_i: Rq^{kappa}, t_i^(k): Rq^{kappa}
         // B_ik * t_i^(k): Rq^{kappa1}
         // First summation: ∑ B_ik * t_i^(k), 1 ≤ i ≤ r, 0 ≤ k ≤ t1−1
@@ -913,6 +907,26 @@ mod tests {
             })
             .collect();
 
+        // Generate all C matrices first
+        let c_matrix: Vec<Vec<Vec<RqMatrix>>> = (0..size_r.value())
+            .map(|i| {
+                (0..size_r.value())
+                    .map(|j| {
+                        (0..t2.value())
+                            .map(|k| RqMatrix::new(kappa2, Zq::from(1)))
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect();
+
+        // Initialize u1 with zeros with size kappa1, each element is a polynomial ring
+        let mut u1 = vec![
+            PolynomialRing {
+                coefficients: vec![Zq::from(0); size_n.value()]
+            };
+            kappa1.value()
+        ];
         // Calculate u1 using the pre-generated b_matrix
         for i in 0..size_r.value() {
             for k in 0..t1.value() {
@@ -943,19 +957,6 @@ mod tests {
         println!("u1: {:?}", u1);
 
         // Second summation: ∑ C_ijk * g_ij^(k)
-        // Generate all C matrices first
-        let c_matrix: Vec<Vec<Vec<RqMatrix>>> = (0..size_r.value())
-            .map(|i| {
-                (0..size_r.value())
-                    .map(|j| {
-                        (0..t2.value())
-                            .map(|k| RqMatrix::new(kappa2, Zq::from(1)))
-                            .collect()
-                    })
-                    .collect()
-            })
-            .collect();
-
         // Calculate u1 using the pre-generated c_matrix
         for i in 0..size_r.value() {
             for j in i..size_r.value() {
