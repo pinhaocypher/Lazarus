@@ -904,12 +904,22 @@ mod tests {
         // B_ik: Rq^{kappa1 x kappa}, t_i: Rq^{kappa}, t_i^(k): Rq^{kappa}
         // B_ik * t_i^(k): Rq^{kappa1}
         // First summation: ∑ B_ik * t_i^(k), 1 ≤ i ≤ r, 0 ≤ k ≤ t1−1
+        // Generate b_matrix first
+        let b_matrix: Vec<Vec<RqMatrix>> = (0..size_r.value())
+            .map(|i| {
+                (0..t1.value())
+                    .map(|k| RqMatrix::new(kappa1, kappa))
+                    .collect()
+            })
+            .collect();
+
+        // Calculate u1 using the pre-generated b_matrix
         for i in 0..size_r.value() {
             for k in 0..t1.value() {
-                let b_i_k = RqMatrix::new(kappa1, kappa).values;
+                let b_i_k = &b_matrix[i][k];
                 let t_i_k = &t[i][k];
                 // matrix<Rq> * vector<Rq> -> vector<Rq>
-                let b_ik_times_t_ik = b_i_k
+                let b_ik_times_t_ik = b_i_k.values
                     .iter()
                     .map(|row| {
                         row.iter()
@@ -933,13 +943,27 @@ mod tests {
         println!("u1: {:?}", u1);
 
         // Second summation: ∑ C_ijk * g_ij^(k)
+        // Generate all C matrices first
+        let c_matrix: Vec<Vec<Vec<RqMatrix>>> = (0..size_r.value())
+            .map(|i| {
+                (0..size_r.value())
+                    .map(|j| {
+                        (0..t2.value())
+                            .map(|k| RqMatrix::new(kappa2, Zq::from(1)))
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect();
+
+        // Calculate u1 using the pre-generated c_matrix
         for i in 0..size_r.value() {
             for j in i..size_r.value() {
-                // i ≤ j
                 for k in 0..t2.value() {
-                    let c_i_j_k = RqMatrix::new(kappa2, Zq::from(1)).values;
+                    println!("i: {}, j: {}, k: {}", i, j, k);
+                    let c_i_j_k = &c_matrix[i][j][k];
                     let g_i_j = &g_matrix_aggregated[i][j];
-                    let c_i_j_k_times_g_i_j = c_i_j_k
+                    let c_i_j_k_times_g_i_j = c_i_j_k.values
                         .iter()
                         .map(|row| {
                             row.iter()
