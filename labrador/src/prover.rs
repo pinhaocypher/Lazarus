@@ -817,10 +817,6 @@ pub fn prove() {
     // transcript.add(z);
     // return transcript;
 
-    };
-}
-
-
 }
 
 #[cfg(test)]
