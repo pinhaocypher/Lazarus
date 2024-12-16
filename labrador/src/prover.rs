@@ -349,17 +349,16 @@ pub fn prove() {
     // A: matrix size: kappa * n, each element is PolynomialRing(R_q)
     // calculate t_i = A * s_i for all i = 1..r
     // size of t_i = (kappa * n)R_q * 1R_q = kappa * n
-    let mut all_t_i = Vec::new();
-    for s_i in &witness_s {
-        let t_i = matrix_times_vector_poly(&a_matrix, &s_i);
+    let t: Vec<Vec<PolynomialRing>> = witness_s.iter().map(|s_i| {
+        let t_i = matrix_times_vector_poly(&a_matrix, s_i);
         println!("size of t_i: {:?}", t_i.len());
-        all_t_i.push(t_i);
-    }
-    println!("Calculated all t_i: {:?}", all_t_i);
+        t_i
+    }).collect();
+    println!("Calculated all t_i: {:?}", t);
     // print size of all_t_i
-    println!("size of all_t_i: {:?}", all_t_i.len());
+    println!("size of all_t_i: {:?}", t.len());
     // check size of all_t_i is kappa
-    assert!(all_t_i.len() == kappa.value());
+    assert!(t.len() == kappa.value());
 
     // ================================================
     // prover
@@ -385,7 +384,7 @@ pub fn prove() {
         // [[4, 1, 0], [7, 3, 0], [1, 9, 0], [8, 1, 1], [9, 5, 1], [9, 0, 1], [2, 7, 0]]
     // ]
 
-    let all_t_i_basis_form_aggregated = decompose_poly_to_basis_form(&all_t_i, basis, digits);
+    let all_t_i_basis_form_aggregated = decompose_poly_to_basis_form(&t, basis, digits);
     println!(
         "all_t_i_basis_form_aggregated: {:?}",
         all_t_i_basis_form_aggregated
@@ -424,12 +423,7 @@ pub fn prove() {
 
     // 2.3 calculate u1
     // 2.3.1 B & C is randomly chosen similar to A
-    let size_b = [Zq::from(3), Zq::from(5)];
-    let size_c = [Zq::from(3), Zq::from(5)];
     // 2.3.2 calculate u1 = sum(B_ik * t_i^(k)) + sum(C_ijk * g_ij^(k))
-    // Define necessary variables
-    let t = &all_t_i_basis_form_aggregated;
-
     // B_ik: Rq^{kappa1 x kappa}, t_i: Rq^{kappa}, t_i^(k): Rq^{kappa}
     // B_ik * t_i^(k): Rq^{kappa1}
     // First summation: ∑ B_ik * t_i^(k), 1 ≤ i ≤ r, 0 ≤ k ≤ t1−1
@@ -444,7 +438,7 @@ pub fn prove() {
     for i in 0..size_r.value() {
         for k in 0..t1.value() {
             let b_i_k = &b_matrix[i][k];
-            let t_i_k = &t[i][k];
+            let t_i_k = &all_t_i_basis_form_aggregated[i][k];
             // matrix<Rq> * vector<Rq> -> vector<Rq>
             let b_ik_times_t_ik = b_i_k.values
                 .iter()
