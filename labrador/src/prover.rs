@@ -389,7 +389,7 @@ pub fn prove() {
         "all_t_i_basis_form_aggregated: {:?}",
         all_t_i_basis_form_aggregated
     );
-    // 2
+
     // 2.2.1 get basis b2 same as 2.1.1
     // Calculate g_ij = <s_i, s_j>
     let num_s = Zq::new(witness_s.len());
@@ -494,6 +494,7 @@ pub fn prove() {
         }
     }
     println!("u1: {:?}", u1);
+
 
     // ================================================
 
@@ -690,6 +691,7 @@ pub fn prove() {
         println!("k: {}", k);
         assert_eq!(b_k_0_from_poly, b_k_0_computed);
     }
+
     // ================================================
 
     // 5. GOAL: Calculate u2 (2nd outer commitment)
@@ -1209,5 +1211,4 @@ mod tests {
         ];
         assert_eq!(result, expected, "The decomposition did not match the expected output.");
     }
-
 }
