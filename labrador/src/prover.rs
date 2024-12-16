@@ -3,6 +3,218 @@ use rand::Rng;
 use crate::setup::setup;
 use crate::algebra::{PolynomialRing, RqMatrix, Zq};
 
+
+// inner product of 2 vectors of PolynomialRing
+fn inner_product_polynomial_ring_vector(
+    a: &Vec<PolynomialRing>,
+    b: &Vec<PolynomialRing>,
+) -> PolynomialRing {
+    a.iter()
+        .zip(b.iter())
+        .map(|(a, b)| a * b)
+        .collect::<Vec<PolynomialRing>>()
+        .into_iter()
+        .reduce(|acc, x| acc + x)
+        .unwrap()
+}
+
+fn inner_product_zq_vector(a: &Vec<Zq>, b: &Vec<Zq>) -> Zq {
+    a.iter()
+        .zip(b.iter())
+        .map(|(a, b)| *a * *b)
+        .sum()
+}
+
+// Function to calculate b^(k)
+fn calculate_b_constraint(
+    s: &Vec<Vec<PolynomialRing>>,
+    a_constraint: &Vec<Vec<PolynomialRing>>,
+    phi_constraint: &Vec<Vec<PolynomialRing>>,
+) -> PolynomialRing {
+    let mut b: PolynomialRing = PolynomialRing {
+        coefficients: vec![Zq::from(0)],
+    };
+    let s_len_usize = s.len();
+
+    // Calculate b^(k)
+    for i in 0..s_len_usize {
+        for j in 0..s_len_usize {
+            // calculate inner product of s[i] and s[j], will return a single PolynomialRing
+            let elem_s_i = &s[i];
+            let elem_s_j = &s[j];
+            // Calculate inner product and update b
+            let inner_product_si_sj = inner_product_polynomial_ring_vector(&elem_s_i, &elem_s_j);
+            let a_constr = &a_constraint[i][j];
+            b = b + (inner_product_si_sj * a_constr);
+        }
+        // calculate inner product of s[i] and phi
+        for (x, y) in s[i].iter().zip(phi_constraint[i].iter()) {
+            b = b + (x * y);
+        }
+    }
+
+    b
+}
+
+// calculate matrix times vector of PolynomialRing
+fn matrix_times_vector_poly(a: &RqMatrix, s_i: &Vec<PolynomialRing>) -> Vec<PolynomialRing> {
+    a.values
+        .iter()
+        .map(|row| {
+            row.iter()
+                .zip(s_i.iter())
+                .map(|(a, b)| a * b)
+                .collect::<Vec<PolynomialRing>>()
+        })
+        .collect::<Vec<Vec<PolynomialRing>>>()
+        .into_iter()
+        .flatten()
+        .collect::<Vec<PolynomialRing>>()
+}
+
+// convert number to basis
+// 42 = 0 * 2^7 + 1 * 2^6 + 0 * 2^5 + 1 * 2^4 + 0 * 2^3 + 1 * 2^2 + 0 * 2^1 + 0 * 2^0
+// first digit: 42 / 2 = 21, result_i = 0
+// second digit: 21 / 2 = 10, result_i = 1
+// third digit: 10 / 2 = 5, result_i = 0
+// forth digit: 5 / 2 = 2, result_i = 1
+// fifth digit: 2 / 2 = 1, result_i = 0
+// sixth digit: 1 / 2 = 0, result_i = 1
+
+fn num_to_basis(num: Zq, basis: Zq, digits: Zq) -> Vec<Zq> {
+    let mut result = Vec::new();
+    let mut remainder = num;
+
+    let zero = Zq::from(0);
+    let one = Zq::from(1);
+    let mut base = basis;
+
+    for _ in 0..digits.value() {
+        let digit = remainder.clone() % base.clone();
+        result.push(digit);
+        remainder = remainder.clone() / base.clone();
+    }
+
+    while result.len() < digits.value() as usize {
+        // push 0 to the highest position
+        result.push(zero.clone());
+    }
+
+    result
+}
+
+// convert ring polynomial to basis
+fn ring_polynomial_to_basis(poly: &PolynomialRing, basis: Zq, digits: Zq) -> Vec<Vec<Zq>> {
+    poly.coefficients
+        .iter()
+        .map(|coeff| num_to_basis(coeff.clone(), basis.clone(), digits.clone()))
+        .collect()
+}
+
+fn generate_gaussian_distribution(nd: Zq) -> Vec<Vec<Zq>> {
+    let nd_usize: usize = nd.value() as usize;
+    let modulus: usize = Zq::modulus();
+    let mut rng = rand::thread_rng();
+    let mut matrix = vec![vec![Zq::from(0); nd_usize]; 256]; // Initialize a 256 x nd matrix
+
+    for i in 0..256 {
+        for j in 0..nd_usize {
+            let random_value: f32 = rng.gen(); // Generate a random float between 0 and 1
+            matrix[i][j] = if random_value < 0.25 {
+                // todo: should we use symmetric distribution from -q/2 to q/2?
+                Zq::from(modulus - 1) // 1/4 probability
+            } else if random_value < 0.75 {
+                Zq::from(0) // 1/2 probability
+            } else {
+                Zq::from(1) // 1/4 probability
+            };
+        }
+    }
+
+    matrix
+}
+
+// Conjugation Automorphism σ_{-1}
+// for polynomial ring a = 1+2x+3x^2, since x^64 = -1, apply this method to a, will get 1+2*(Zq.modulus()-1) * x^(64-1) +3*(Zq.modulus()-1) * x^(64-2)
+fn conjugation_automorphism(poly: &PolynomialRing) -> PolynomialRing {
+    let modulus_minus_one = Zq::from(Zq::modulus() - 1);
+    let transformed_coeffs: Vec<Zq> = (0..PolynomialRing::DEGREE_BOUND)
+        .map(|i| {
+            if i < poly.coefficients.len() {
+                if i == 0 {
+                    poly.coefficients[i].clone()
+                } else {
+                    poly.coefficients[i].clone() * modulus_minus_one
+                }
+            } else {
+                Zq::from(0)
+            }
+        })
+        .collect();
+    // reverse the coefficients except constant term
+    let reversed_coefficients = transformed_coeffs.iter()
+        .take(1)
+        .cloned()
+        .chain(transformed_coeffs.iter().skip(1).rev().cloned())
+        .collect::<Vec<Zq>>();
+    PolynomialRing {
+        coefficients: reversed_coefficients,
+    }
+}
+
+fn generate_random_polynomial_ring(deg_bound_d: usize) -> PolynomialRing {
+    let mut rng = rand::thread_rng();
+    PolynomialRing {
+        coefficients: (0..deg_bound_d).map(|_| Zq::from(rng.gen_range(0..10))).collect(),
+    }
+}
+
+fn decompose_poly_to_basis_form(
+    poly: &Vec<Vec<PolynomialRing>>,
+    basis: Zq,
+    digits: Zq,
+) -> Vec<Vec<Vec<PolynomialRing>>> {
+    // Decompose h_ij into basis t_1 parts
+    let poly_basis_form: Vec<Vec<Vec<Vec<Zq>>>> = poly
+        .iter()
+        .map(|poly_i| {
+            poly_i.iter()
+                .map(|poly_i_j| ring_polynomial_to_basis(poly_i_j, basis, digits))
+                .collect::<Vec<Vec<Vec<Zq>>>>()
+        })
+        .collect::<Vec<Vec<Vec<Vec<Zq>>>>>();
+
+    // Pick elements at each position across all inner vectors and aggregate them
+    let mut poly_basis_form_aggregated: Vec<Vec<Vec<PolynomialRing>>> = Vec::new();
+    for (_i, poly_i_basis_form) in poly_basis_form.iter().enumerate() {
+        let mut row_results: Vec<Vec<PolynomialRing>> = Vec::new();
+        for (_j, poly_i_j_basis_form) in poly_i_basis_form.iter().enumerate() {
+            let mut row_results_j: Vec<PolynomialRing> = Vec::new();
+            // Get the number of basis parts and the number of loops needed
+            let num_basis_needed = poly_i_j_basis_form.len();
+            let num_loop_needed = poly_i_j_basis_form
+                .first()
+                .map_or(0, |v| v.len());
+            for k in 0..num_loop_needed {
+                let mut row_k: Vec<Zq> = Vec::new();
+                for basis_needed in 0..num_basis_needed {
+                    if let Some(num_to_be_pushed) = poly_i_j_basis_form.get(basis_needed).and_then(|v| v.get(k)) {
+                        row_k.push(num_to_be_pushed.clone());
+                    } else {
+                        row_k.push(Zq::from(0));
+                    }
+                }
+                row_results_j.push(PolynomialRing {
+                    coefficients: row_k,
+                });
+            } // finish poly_i_j_basis_form calculation
+            row_results.push(row_results_j);
+        }
+        poly_basis_form_aggregated.push(row_results);
+    }
+    poly_basis_form_aggregated
+}
+
 #[time_profiler()]
 pub fn prove() {
     // s is a vector of size r. each s_i is a PolynomialRing<Zq> with n coefficients
@@ -608,220 +820,12 @@ pub fn prove() {
     // Send z, t_i, g_ij, h_ij to verifier
     // transcript.add(z);
     // return transcript;
-}
 
-
-// inner product of 2 vectors of PolynomialRing
-fn inner_product_polynomial_ring_vector(
-    a: &Vec<PolynomialRing>,
-    b: &Vec<PolynomialRing>,
-) -> PolynomialRing {
-    a.iter()
-        .zip(b.iter())
-        .map(|(a, b)| a * b)
-        .collect::<Vec<PolynomialRing>>()
-        .into_iter()
-        .reduce(|acc, x| acc + x)
-        .unwrap()
-}
-
-fn inner_product_zq_vector(a: &Vec<Zq>, b: &Vec<Zq>) -> Zq {
-    a.iter()
-        .zip(b.iter())
-        .map(|(a, b)| *a * *b)
-        .sum()
-}
-
-// Function to calculate b^(k)
-fn calculate_b_constraint(
-    s: &Vec<Vec<PolynomialRing>>,
-    a_constraint: &Vec<Vec<PolynomialRing>>,
-    phi_constraint: &Vec<Vec<PolynomialRing>>,
-) -> PolynomialRing {
-    let mut b: PolynomialRing = PolynomialRing {
-        coefficients: vec![Zq::from(0)],
     };
-    let s_len_usize = s.len();
-
-    // Calculate b^(k)
-    for i in 0..s_len_usize {
-        for j in 0..s_len_usize {
-            // calculate inner product of s[i] and s[j], will return a single PolynomialRing
-            let elem_s_i = &s[i];
-            let elem_s_j = &s[j];
-            // Calculate inner product and update b
-            let inner_product_si_sj = inner_product_polynomial_ring_vector(&elem_s_i, &elem_s_j);
-            let a_constr = &a_constraint[i][j];
-            b = b + (inner_product_si_sj * a_constr);
-        }
-        // calculate inner product of s[i] and phi
-        for (x, y) in s[i].iter().zip(phi_constraint[i].iter()) {
-            b = b + (x * y);
-        }
-    }
-
-    b
 }
 
-// calculate matrix times vector of PolynomialRing
-fn matrix_times_vector_poly(a: &RqMatrix, s_i: &Vec<PolynomialRing>) -> Vec<PolynomialRing> {
-    a.values
-        .iter()
-        .map(|row| {
-            row.iter()
-                .zip(s_i.iter())
-                .map(|(a, b)| a * b)
-                .collect::<Vec<PolynomialRing>>()
-        })
-        .collect::<Vec<Vec<PolynomialRing>>>()
-        .into_iter()
-        .flatten()
-        .collect::<Vec<PolynomialRing>>()
+
 }
-
-// convert number to basis
-// 42 = 0 * 2^7 + 1 * 2^6 + 0 * 2^5 + 1 * 2^4 + 0 * 2^3 + 1 * 2^2 + 0 * 2^1 + 0 * 2^0
-// first digit: 42 / 2 = 21, result_i = 0
-// second digit: 21 / 2 = 10, result_i = 1
-// third digit: 10 / 2 = 5, result_i = 0
-// forth digit: 5 / 2 = 2, result_i = 1
-// fifth digit: 2 / 2 = 1, result_i = 0
-// sixth digit: 1 / 2 = 0, result_i = 1
-
-fn num_to_basis(num: Zq, basis: Zq, digits: Zq) -> Vec<Zq> {
-    let mut result = Vec::new();
-    let mut remainder = num;
-
-    let zero = Zq::from(0);
-    let one = Zq::from(1);
-    let mut base = basis;
-
-    for _ in 0..digits.value() {
-        let digit = remainder.clone() % base.clone();
-        result.push(digit);
-        remainder = remainder.clone() / base.clone();
-    }
-
-    while result.len() < digits.value() as usize {
-        // push 0 to the highest position
-        result.push(zero.clone());
-    }
-
-    result
-}
-
-// convert ring polynomial to basis
-fn ring_polynomial_to_basis(poly: &PolynomialRing, basis: Zq, digits: Zq) -> Vec<Vec<Zq>> {
-    poly.coefficients
-        .iter()
-        .map(|coeff| num_to_basis(coeff.clone(), basis.clone(), digits.clone()))
-        .collect()
-}
-
-fn generate_gaussian_distribution(nd: Zq) -> Vec<Vec<Zq>> {
-    let nd_usize: usize = nd.value() as usize;
-    let modulus: usize = Zq::modulus();
-    let mut rng = rand::thread_rng();
-    let mut matrix = vec![vec![Zq::from(0); nd_usize]; 256]; // Initialize a 256 x nd matrix
-
-    for i in 0..256 {
-        for j in 0..nd_usize {
-            let random_value: f32 = rng.gen(); // Generate a random float between 0 and 1
-            matrix[i][j] = if random_value < 0.25 {
-                // todo: should we use symmetric distribution from -q/2 to q/2?
-                Zq::from(modulus - 1) // 1/4 probability
-            } else if random_value < 0.75 {
-                Zq::from(0) // 1/2 probability
-            } else {
-                Zq::from(1) // 1/4 probability
-            };
-        }
-    }
-
-    matrix
-}
-
-// Conjugation Automorphism σ_{-1}
-// for polynomial ring a = 1+2x+3x^2, since x^64 = -1, apply this method to a, will get 1+2*(Zq.modulus()-1) * x^(64-1) +3*(Zq.modulus()-1) * x^(64-2)
-fn conjugation_automorphism(poly: &PolynomialRing) -> PolynomialRing {
-    let modulus_minus_one = Zq::from(Zq::modulus() - 1);
-    let transformed_coeffs: Vec<Zq> = (0..PolynomialRing::DEGREE_BOUND)
-        .map(|i| {
-            if i < poly.coefficients.len() {
-                if i == 0 {
-                    poly.coefficients[i].clone()
-                } else {
-                    poly.coefficients[i].clone() * modulus_minus_one
-                }
-            } else {
-                Zq::from(0)
-            }
-        })
-        .collect();
-    // reverse the coefficients except constant term
-    let reversed_coefficients = transformed_coeffs.iter()
-        .take(1)
-        .cloned()
-        .chain(transformed_coeffs.iter().skip(1).rev().cloned())
-        .collect::<Vec<Zq>>();
-    PolynomialRing {
-        coefficients: reversed_coefficients,
-    }
-}
-
-fn generate_random_polynomial_ring(deg_bound_d: usize) -> PolynomialRing {
-    let mut rng = rand::thread_rng();
-    PolynomialRing {
-        coefficients: (0..deg_bound_d).map(|_| Zq::from(rng.gen_range(0..10))).collect(),
-    }
-}
-
-fn decompose_poly_to_basis_form(
-    poly: &Vec<Vec<PolynomialRing>>,
-    basis: Zq,
-    digits: Zq,
-) -> Vec<Vec<Vec<PolynomialRing>>> {
-    // Decompose h_ij into basis t_1 parts
-    let poly_basis_form: Vec<Vec<Vec<Vec<Zq>>>> = poly
-        .iter()
-        .map(|poly_i| {
-            poly_i.iter()
-                .map(|poly_i_j| ring_polynomial_to_basis(poly_i_j, basis, digits))
-                .collect::<Vec<Vec<Vec<Zq>>>>()
-        })
-        .collect::<Vec<Vec<Vec<Vec<Zq>>>>>();
-
-    // Pick elements at each position across all inner vectors and aggregate them
-    let mut poly_basis_form_aggregated: Vec<Vec<Vec<PolynomialRing>>> = Vec::new();
-    for (_i, poly_i_basis_form) in poly_basis_form.iter().enumerate() {
-        let mut row_results: Vec<Vec<PolynomialRing>> = Vec::new();
-        for (_j, poly_i_j_basis_form) in poly_i_basis_form.iter().enumerate() {
-            let mut row_results_j: Vec<PolynomialRing> = Vec::new();
-            // Get the number of basis parts and the number of loops needed
-            let num_basis_needed = poly_i_j_basis_form.len();
-            let num_loop_needed = poly_i_j_basis_form
-                .first()
-                .map_or(0, |v| v.len());
-            for k in 0..num_loop_needed {
-                let mut row_k: Vec<Zq> = Vec::new();
-                for basis_needed in 0..num_basis_needed {
-                    if let Some(num_to_be_pushed) = poly_i_j_basis_form.get(basis_needed).and_then(|v| v.get(k)) {
-                        row_k.push(num_to_be_pushed.clone());
-                    } else {
-                        row_k.push(Zq::from(0));
-                    }
-                }
-                row_results_j.push(PolynomialRing {
-                    coefficients: row_k,
-                });
-            } // finish poly_i_j_basis_form calculation
-            row_results.push(row_results_j);
-        }
-        poly_basis_form_aggregated.push(row_results);
-    }
-    poly_basis_form_aggregated
-}
-
 
 #[cfg(test)]
 mod tests {
