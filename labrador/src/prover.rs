@@ -182,29 +182,32 @@ pub fn prove() {
     // 2.2.1 get basis b2 same as 2.1.1
     // Calculate g_ij = <s_i, s_j>
     let num_s = Zq::new(witness_s.len());
-    let mut g_matrix: Vec<Vec<PolynomialRing>> = vec![
-        vec![
-            PolynomialRing {
-                coefficients: vec![Zq::new(0); size_n.value()]
-            };
-            num_s.value()
-        ];
-        num_s.value()
-    ];
-    // Calculate b^(k)
-    for i in 0..num_s.value() {
-        for j in 0..num_s.value() {
-            // calculate inner product of s[i] and s[j]
-            let elem_s_i = &witness_s[i];
-            let elem_s_j = &witness_s[j];
-            // Calculate inner product and update b
-            let inner_product_si_sj = inner_product_polynomial_ring_vector(&elem_s_i, &elem_s_j);
-            g_matrix[i][j] = inner_product_si_sj;
+
+    // Calculate garbage polynomial g_ij = <s_i, s_j>
+    let g_gar_poly: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
+        (0..size_r.value()).map(|j| {
+            let s_i = &witness_s[i];
+            let s_j = &witness_s[j];
+            inner_product_polynomial_ring_vector(&s_i, &s_j)
+        }).collect::<Vec<PolynomialRing>>()
+    }).collect();
+    println!("g_gar_poly: {:?}", g_gar_poly);
+    assert_eq!(g_gar_poly.len(), size_r.value());
+    assert_eq!(g_gar_poly[0].len(), size_r.value());
+    for i in 0..size_r.value() {
+        for j in (i + 1)..size_r.value() {
+            assert_eq!(
+                g_gar_poly[i][j],
+                g_gar_poly[j][i],
+                "g_ij is not equal to g_ji at indices ({}, {})",
+                i,
+                j
+            );
         }
     }
-    println!("g_matrix: {:?}", g_matrix);
 
-    let g_matrix_aggregated = decompose_poly_to_basis_form(&g_matrix, basis, t2);
+
+    let g_matrix_aggregated = decompose_poly_to_basis_form(&g_gar_poly, basis, t2);
     println!("g_matrix_aggregated: {:?}", g_matrix_aggregated);
 
     // 2.3 calculate u1
@@ -512,7 +515,7 @@ pub fn prove() {
     println!("phi_aggr: {:?}", phi_aggr);
     assert_eq!(phi_aggr.len(), size_r.value());
     assert_eq!(phi_aggr[0].len(), size_n.value());
-    // 5.3 h_ij = 1/2 * (<phi_i, s_j> + <phi_j, s_i>)
+    // 5.3 Calculate garbage polynomial h_ij = 1/2 * (<phi_i, s_j> + <phi_j, s_i>)
     let h_gar_poly: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
         (0..size_r.value()).map(|j| {
             let phi_i = &phi_aggr[i];
