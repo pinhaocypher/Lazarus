@@ -294,7 +294,7 @@ pub fn prove() -> (St, Tr) {
     let double_lambda = lambda * Zq::new(2);
     let log_q = Zq::new(32);
     let deg_bound_d = Zq::new(8); // random polynomial degree bound
-    let beta = Zq::new(60); // Example value for beta
+    let beta = Zq::new(70); // Example value for beta
     // 0. setup
     // matrices A, B, C, D are common reference string
     let (a_matrix, b_matrix, c_matrix, d_matrix) = setup(
