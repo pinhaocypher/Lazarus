@@ -899,6 +899,21 @@ pub fn prove() -> (St, Tr) {
 }
 
 fn verify(st: St, tr: Tr) {
+    // same parameters as in the prover
+    let size_r = Zq::new(3); // r: Number of witness elements
+    let size_n = Zq::new(5); // n
+    let basis = Zq::new(10);
+    let digits = Zq::new(3); // t1
+    let t1 = digits;
+    let t2 = digits;
+    let kappa = Zq::new(3); // Example size
+    let kappa1 = Zq::from(5);
+    let kappa2 = Zq::from(5);
+    let lambda = Zq::new(128);
+    let double_lambda = lambda * Zq::new(2);
+    let log_q = Zq::new(32);
+    let deg_bound_d = Zq::new(8); // random polynomial degree bound
+    let new_beta = Zq::new(250); // Example value for beta
 
     let St {
         a_constraint,
@@ -938,7 +953,35 @@ fn verify(st: St, tr: Tr) {
             assert_eq!(h[i][j], h[j][i], "h_ij is not equal to h_ji at indices ({}, {})", i, j);
         }
     }
-    // 3. check if norm <= beta'^2
+    // 3. check if norm sum of z, t, g, h <= beta'^2
+    // 3.1 decompose z, t, g, h to basis form
+    let z_basis_form = poly_vec_decompose_and_aggregate(&z, basis, digits);
+    println!("z_basis_form: {:?}", z_basis_form);
+    let all_t_i_basis_form_aggregated = poly_matrix_decompose_and_aggregate(&t, basis, digits);
+    println!(
+        "all_t_i_basis_form_aggregated: {:?}",
+        all_t_i_basis_form_aggregated
+    );
+    let g_matrix_aggregated = poly_matrix_decompose_and_aggregate(&g, basis, t2);
+    println!("g_matrix_aggregated: {:?}", g_matrix_aggregated);
+
+    let h_gar_poly_basis_form_aggregated = poly_matrix_decompose_and_aggregate(&h, basis, digits);
+    println!(
+        "h_gar_poly_basis_form_aggregated: {:?}",
+        h_gar_poly_basis_form_aggregated
+    );
+    let norm_z = poly_matrix_norm_squared(&z_basis_form);
+    println!("norm_z: {:?}", norm_z);
+    let norm_t = poly_3d_norm_squared(&all_t_i_basis_form_aggregated);
+    println!("norm_t: {:?}", norm_t);
+    let norm_g = poly_3d_norm_squared(&g_matrix_aggregated);
+    println!("norm_g: {:?}", norm_g);
+    let norm_h = poly_3d_norm_squared(&h_gar_poly_basis_form_aggregated);
+    println!("norm_h: {:?}", norm_h);
+    let norm_sum = norm_z + norm_t + norm_g + norm_h;
+    println!("norm_sum: {:?}", norm_sum);
+    assert!(norm_sum <= new_beta.pow(2));
+
     // 4. check if Az is valid
     // 5. check if <z, z> ?= sum(g_ij * c_i * c_j)
     // 6. check if sum(<phi_i, z> * c_i) ?= sum(h_ij * c_i * c_j)
