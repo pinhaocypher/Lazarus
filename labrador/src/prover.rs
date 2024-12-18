@@ -215,6 +215,19 @@ fn decompose_poly_to_basis_form(
     poly_basis_form_aggregated
 }
 
+// Calculate the sum of squared norms
+fn poly_norm_squared(poly: &PolynomialRing) -> Zq {
+    poly.coefficients.iter().fold(Zq::new(0), |acc, coeff| acc + coeff.pow(2))
+}
+
+fn poly_matrix_norm_squared(poy_matrix: &Vec<Vec<PolynomialRing>>) -> Zq {
+    poy_matrix.iter().fold(Zq::new(0), |acc, vector| {
+        let norm_squared: Zq = vector.iter().fold(Zq::new(0), |sum, elem| {
+            sum + poly_norm_squared(elem)
+        });
+        acc + norm_squared
+    })
+}
 
 // statement
 struct St {
@@ -281,15 +294,7 @@ pub fn prove() -> (St, Tr) {
         })
         .collect();
     println!("s: {:?}", witness_s);
-    // Calculate the sum of squared norms
-    let mut sum_squared_norms = Zq::new(0);
-    for vector in &witness_s {
-        let norm_squared: Zq = vector
-            .iter()
-            .map(|elem| elem.coefficients[0].pow(2))
-            .fold(Zq::new(0), |acc, val| acc + val);
-        sum_squared_norms = sum_squared_norms + norm_squared;
-    }
+    let sum_squared_norms = poly_matrix_norm_squared(&witness_s);
     println!("sum_squared_norms: {}", sum_squared_norms.value());
     println!("beta^2: {}", beta.pow(2));
     // Check the condition
@@ -1308,5 +1313,35 @@ mod tests {
             ],
         ];
         assert_eq!(result, expected, "The decomposition did not match the expected output.");
+    }
+
+    #[test]
+    fn test_poly_norm_squared() {
+        let poly = PolynomialRing {
+            coefficients: vec![Zq::from(1), Zq::from(2), Zq::from(3)],
+        };
+        let expected = Zq::from(14); // 1^2 + 2^2 + 3^2 = 14
+        let result = poly_norm_squared(&poly);
+        assert_eq!(result, expected, "poly_norm_squared should return the sum of squared coefficients");
+    }
+
+    #[test]
+    fn test_poly_matrix_norm_squared() {
+        let poly1 = PolynomialRing {
+            coefficients: vec![Zq::from(1), Zq::from(2), Zq::from(3)],
+        };
+        let poly2 = PolynomialRing {
+            coefficients: vec![Zq::from(4), Zq::from(5), Zq::from(6)],
+        };
+        let poly_matrix = vec![
+            vec![poly1.clone(), poly2.clone()],
+            vec![poly2.clone(), poly1.clone()],
+        ];
+        // poly_norm_squared(poly1) = 1 + 4 + 9 = 14
+        // poly_norm_squared(poly2) = 16 + 25 + 36 = 77
+        // Total sum: 14 + 77 + 77 + 14 = 182
+        let expected = Zq::from(182);
+        let result = poly_matrix_norm_squared(&poly_matrix);
+        assert_eq!(result, expected, "poly_matrix_norm_squared should return the sum of squared norms of all polynomials in the matrix");
     }
 }
