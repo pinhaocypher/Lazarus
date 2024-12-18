@@ -395,21 +395,21 @@ pub fn prove() {
     let num_s = Zq::new(witness_s.len());
 
     // Calculate garbage polynomial g_ij = <s_i, s_j>
-    let g_gar_poly: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
+    let g: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
         (0..size_r.value()).map(|j| {
             let s_i = &witness_s[i];
             let s_j = &witness_s[j];
             inner_product_polynomial_ring_vector(&s_i, &s_j)
         }).collect::<Vec<PolynomialRing>>()
     }).collect();
-    println!("g_gar_poly: {:?}", g_gar_poly);
-    assert_eq!(g_gar_poly.len(), size_r.value());
-    assert_eq!(g_gar_poly[0].len(), size_r.value());
+    println!("g_gar_poly: {:?}", g);
+    assert_eq!(g.len(), size_r.value());
+    assert_eq!(g[0].len(), size_r.value());
     for i in 0..size_r.value() {
         for j in (i + 1)..size_r.value() {
             assert_eq!(
-                g_gar_poly[i][j],
-                g_gar_poly[j][i],
+                g[i][j],
+                g[j][i],
                 "g_ij is not equal to g_ji at indices ({}, {})",
                 i,
                 j
@@ -418,7 +418,7 @@ pub fn prove() {
     }
 
 
-    let g_matrix_aggregated = decompose_poly_to_basis_form(&g_gar_poly, basis, t2);
+    let g_matrix_aggregated = decompose_poly_to_basis_form(&g, basis, t2);
     println!("g_matrix_aggregated: {:?}", g_matrix_aggregated);
 
     // 2.3 calculate u1
@@ -503,13 +503,13 @@ pub fn prove() {
     // generate gaussian distribution matrices
     // there are size_r matrices, each matrix size is 256 * nd
     // TODO: should from verifier
-    let gaussian_distribution_matrices = (0..size_r.value())
+    let pai = (0..size_r.value())
         .map(|_| generate_gaussian_distribution(nd))
         .collect::<Vec<Vec<Vec<Zq>>>>();
-    println!("gaussian_distribution_matrices: {:?}", gaussian_distribution_matrices);
-    assert_eq!(gaussian_distribution_matrices.len(), size_r.value());
-    assert_eq!(gaussian_distribution_matrices[0].len(), double_lambda.value());
-    assert_eq!(gaussian_distribution_matrices[0][0].len(), nd.value());
+    println!("gaussian_distribution_matrices: {:?}", pai);
+    assert_eq!(pai.len(), size_r.value());
+    assert_eq!(pai[0].len(), double_lambda.value());
+    assert_eq!(pai[0][0].len(), nd.value());
     // 3.1 PI_i is randomly chosen from \Chi { -1, 0, 1 }^{256 * nd}
     //      (Using Guassian Distribution)
 
@@ -538,9 +538,9 @@ pub fn prove() {
     for j in 0..double_lambda.value() {
         let mut sum = Zq::new(0);
         for i in 0..size_r.value() {
-            let pai = &gaussian_distribution_matrices[i][j];
+            let pai_element = &pai[i][j];
             let s_i = &s_coeffs[i];
-            let inner_product = inner_product_zq_vector(&pai, &s_i);
+            let inner_product = inner_product_zq_vector(&pai_element, &s_i);
             sum = sum + inner_product;
         }
         p.push(sum);
@@ -552,9 +552,9 @@ pub fn prove() {
     for j in 0..double_lambda.value() {
         let mut sum = PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] };
         for i in 0..size_r.value() {
-            let pai = &gaussian_distribution_matrices[i][j];
+            let pai_element = &pai[i][j];
             let s_i = &s_coeffs[i];
-            let pai_poly = PolynomialRing { coefficients: pai.clone() };
+            let pai_poly = PolynomialRing { coefficients: pai_element.clone() };
             let pai_poly_ca = conjugation_automorphism(&pai_poly);
             let s_i_poly = PolynomialRing { coefficients: s_i.clone() };
             sum = sum + &pai_poly_ca * s_i_poly;
@@ -574,25 +574,25 @@ pub fn prove() {
     // 4.1 psi^(k) is randomly chosen from Z_q^{L}
     // k = 1..λ/log2^q
     let size_k = lambda / log_q;
-    let psi_challenge: Vec<Vec<Zq>> = (0..size_k.value())
+    let psi: Vec<Vec<Zq>> = (0..size_k.value())
         .map(|_| (0..constraint_num_l.value()).map(|_| Zq::new(rng.gen_range(0..10))).collect())
         .collect();
-    assert_eq!(psi_challenge.len(), size_k.value());
-    assert_eq!(psi_challenge[0].len(), constraint_num_l.value());
+    assert_eq!(psi.len(), size_k.value());
+    assert_eq!(psi[0].len(), constraint_num_l.value());
 
     // 4.2 omega^(k) is randomly chosen from Z_q^{256}
     //      (Both using Guassian Distribution)
-    let omega_challenge: Vec<Vec<Zq>> = (0..size_k.value())
+    let omega: Vec<Vec<Zq>> = (0..size_k.value())
         .map(|_| (0..double_lambda.value()).map(|_| Zq::new(rng.gen_range(0..10))).collect())
         .collect();
-    assert_eq!(omega_challenge.len(), size_k.value());
-    assert_eq!(omega_challenge[0].len(), double_lambda.value());
+    assert_eq!(omega.len(), size_k.value());
+    assert_eq!(omega[0].len(), double_lambda.value());
 
     // 4.3 caculate b^{''(k)}
     // 4.3.1 calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
     let a_constraint_ct_aggr: Vec<Vec<Vec<PolynomialRing>>> = (0..size_k.value())
         .map(|k| {
-            let psi_k = &psi_challenge[k];
+            let psi_k = &psi[k];
             (0..size_r.value())
                 .map(|i| {
                     (0..size_r.value())
@@ -622,7 +622,7 @@ pub fn prove() {
         (0..size_r.value()).map(|i| {
             // Part 1: sum(psi_l^(k) * phi_constraint_ct[l][i] for all l)
             let part1: Vec<PolynomialRing> = (0..constraint_num_l.value()).map(|l| {
-                let psi = psi_challenge[k][l];
+                let psi = psi[k][l];
                 phi_constraint_ct[l][i].iter().map(|p| p * psi).collect::<Vec<PolynomialRing>>()
             }).fold(
                 vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
@@ -631,8 +631,8 @@ pub fn prove() {
 
             // Part 2: sum(omega_j^(k) * sigma_{-1} * pi_i^{j} for all j)
             let part2: Vec<PolynomialRing> = (0..double_lambda.value()).map(|j| {
-                let omega = omega_challenge[k][j];
-                gaussian_distribution_matrices[i][j].chunks(deg_bound_d.value()).take(size_n.value()).map(|chunk| {
+                let omega = omega[k][j];
+                pai[i][j].chunks(deg_bound_d.value()).take(size_n.value()).map(|chunk| {
                     let pai_poly = PolynomialRing { coefficients: chunk.to_vec() };
                     conjugation_automorphism(&pai_poly) * omega
                 }).collect::<Vec<PolynomialRing>>()
@@ -678,12 +678,12 @@ pub fn prove() {
         let b_k_0_from_poly: Zq = b_aggr[k].coefficients[0];
         // sum(psi_l^(k) * b_0^{'(l)}) for all l = 1..L
         let mut b_k_0_computed: Zq = (0..constraint_num_l.value()).map(|l| {
-            let psi_k_l = psi_challenge[k][l];
+            let psi_k_l = psi[k][l];
             let b_l_0 = b_constraint_ct[l];
             psi_k_l * b_l_0
         }).sum();
         // <⟨omega^(k),p⟩>
-        let omega_k = &omega_challenge[k];
+        let omega_k = &omega[k];
         let inner_product_omega_k_p = inner_product_zq_vector(&omega_k, &p);
         // add them together
         b_k_0_computed += inner_product_omega_k_p;
@@ -696,13 +696,13 @@ pub fn prove() {
 
     // 5. GOAL: Calculate u2 (2nd outer commitment)
     // 5.1 vec<alpha> and vec<beta> are randomly chosen from R_q^{K} and R_q^{128/logQ}
-    let alpha_challenge: Vec<PolynomialRing> = (0..constraint_num_k.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
-    let beta_challenge: Vec<PolynomialRing> = (0..size_k.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
+    let alpha: Vec<PolynomialRing> = (0..constraint_num_k.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
+    let beta: Vec<PolynomialRing> = (0..size_k.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
     // 5.2 phi_i = sum(alpha_k * phi_i) + beta_k * phi_i^{''(k)}
     let phi_aggr: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
         // Part 1: sum(alpha_k * phi_i)
         let part1: Vec<PolynomialRing> = (0..constraint_num_k.value()).map(|k| {
-            let alpha = &alpha_challenge[k];
+            let alpha = &alpha[k];
             phi_constraint[k][i].iter().map(|p| p * alpha).collect::<Vec<PolynomialRing>>()
         }).fold(
             vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
@@ -711,7 +711,7 @@ pub fn prove() {
 
         // Part 2: sum(beta_k * phi_i^{''(k)})
         let part2: Vec<PolynomialRing> = (0..size_k.value()).map(|k| {
-            let beta = &beta_challenge[k];
+            let beta = &beta[k];
             phi_ct_aggr[k][i].iter().map(|p| p * beta).collect::<Vec<PolynomialRing>>()
         }).fold(
             vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
@@ -724,7 +724,7 @@ pub fn prove() {
     assert_eq!(phi_aggr.len(), size_r.value());
     assert_eq!(phi_aggr[0].len(), size_n.value());
     // 5.3 Calculate garbage polynomial h_ij = 1/2 * (<phi_i, s_j> + <phi_j, s_i>)
-    let h_gar_poly: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
+    let h: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
         (0..size_r.value()).map(|j| {
             let phi_i = &phi_aggr[i];
             let phi_j = &phi_aggr[j];
@@ -734,14 +734,13 @@ pub fn prove() {
             inner_product_ij / Zq::from(2)
         }).collect::<Vec<PolynomialRing>>()
     }).collect();
-    println!("h_gar_poly: {:?}", h_gar_poly);
-    assert_eq!(h_gar_poly.len(), size_r.value());
-    assert_eq!(h_gar_poly[0].len(), size_r.value());
+    assert_eq!(h.len(), size_r.value());
+    assert_eq!(h[0].len(), size_r.value());
     for i in 0..size_r.value() {
         for j in (i + 1)..size_r.value() {
             assert_eq!(
-                h_gar_poly[i][j],
-                h_gar_poly[j][i],
+                h[i][j],
+                h[j][i],
                 "h_ij is not equal to h_ji at indices ({}, {})",
                 i,
                 j
@@ -749,7 +748,7 @@ pub fn prove() {
         }
     }
 
-    let h_gar_poly_basis_form_aggregated = decompose_poly_to_basis_form(&h_gar_poly, basis, digits);
+    let h_gar_poly_basis_form_aggregated = decompose_poly_to_basis_form(&h, basis, digits);
     println!(
         "h_gar_poly_basis_form_aggregated: {:?}",
         h_gar_poly_basis_form_aggregated
@@ -804,10 +803,10 @@ pub fn prove() {
     // 6. GOAL: calculate z (Amortized Opening)
     // 6.1 c_i is randomly chosen from C, i = 1..r
     // todo: get c from challenge space, refer to paper page 6
-    let c_challenge: Vec<Vec<Zq>> = (0..size_r.value()).map(|_| (0..size_n.value()).map(|_| Zq::new(rng.gen_range(0..10))).collect()).collect();
+    let c: Vec<Vec<Zq>> = (0..size_r.value()).map(|_| (0..size_n.value()).map(|_| Zq::new(rng.gen_range(0..10))).collect()).collect();
     // 6.2 calculate z = sum(c_i * s_i) for all i = 1..r
     let z: Vec<PolynomialRing> = (0..size_r.value()).map(|i| {
-        let c_i = &c_challenge[i];
+        let c_i = &c[i];
         let s_i = &witness_s[i];
         c_i.iter().zip(s_i.iter()).map(|(c, s)| s * *c).fold(PolynomialRing { coefficients: vec![Zq::from(0); size_n.value()] }, |acc, x| acc + x)
     }).collect();
