@@ -215,8 +215,37 @@ fn decompose_poly_to_basis_form(
     poly_basis_form_aggregated
 }
 
+
+// statement
+struct St {
+    a_constraint: Vec<Vec<Vec<PolynomialRing>>>,
+    phi_constraint: Vec<Vec<Vec<PolynomialRing>>>,
+    b_constraint: Vec<PolynomialRing>,
+    a_constraint_ct: Vec<Vec<Vec<PolynomialRing>>>,
+    phi_constraint_ct: Vec<Vec<Vec<PolynomialRing>>>,
+    b_constraint_ct: Vec<Zq>,
+}
+
+struct Tr {
+    u1: Vec<PolynomialRing>, // Replace with the actual type
+    pai: Vec<Vec<Vec<Zq>>>, // Replace with the actual type
+    p: Vec<Zq>, // Replace with the actual type
+    psi: Vec<Vec<Zq>>, // Replace with the actual type
+    omega: Vec<Vec<Zq>>, // Replace with the actual type
+    b_aggr: Vec<PolynomialRing>, // Replace with the actual type
+    alpha: Vec<PolynomialRing>, // Replace with the actual type
+    beta: Vec<PolynomialRing>, // Replace with the actual type
+    u2: Vec<PolynomialRing>,
+    c: Vec<Vec<Zq>>,
+    z: Vec<PolynomialRing>,
+    t: Vec<Vec<PolynomialRing>>, // Replace with the actual type
+    g: Vec<Vec<PolynomialRing>>, // Replace with the actual type
+    h: Vec<Vec<PolynomialRing>>,
+}
+
+
 #[time_profiler()]
-pub fn prove() {
+pub fn prove() -> (St, Tr) {
     // s is a vector of size r. each s_i is a PolynomialRing<Zq> with n coefficients
     let size_r = Zq::new(3); // r: Number of witness elements
     let size_n = Zq::new(5); // n
@@ -816,17 +845,91 @@ pub fn prove() {
     // transcript.add(z);
     // return transcript;
 
+    let st = St {
+        a_constraint,
+        phi_constraint,
+        b_constraint,
+        a_constraint_ct,
+        phi_constraint_ct,
+        b_constraint_ct,
+    };
+    let tr = Tr {
+        u1,
+        pai,
+        p,
+        psi,
+        omega,
+        b_aggr,
+        alpha,
+        beta,
+        u2,
+        c,
+        z,
+        t,
+        g,
+        h,
+    };
+    return (st, tr);
+}
+
+fn verify(st: St, tr: Tr) {
+
+    let St {
+        a_constraint,
+        phi_constraint,
+        b_constraint,
+        a_constraint_ct,
+        phi_constraint_ct,
+        b_constraint_ct,
+    } = st;
+
+    let Tr {
+        u1,
+        pai,
+        p,
+        psi,
+        omega,
+        b_aggr,
+        alpha,
+        beta,
+        u2,
+        c,
+        z,
+        t,
+        g,
+        h,
+    } = tr;
+    let size_r = Zq::from(g.len());
+    // 1. check g_ij ?= g_ji
+    for i in 0..size_r.value() {
+        for j in (i + 1)..size_r.value() {
+            assert_eq!(g[i][j], g[j][i], "g_ij is not equal to g_ji at indices ({}, {})", i, j);
+        }
+    }
+    // 2. check h_ij ?= h_ji
+    for i in 0..size_r.value() {
+        for j in (i + 1)..size_r.value() {
+            assert_eq!(h[i][j], h[j][i], "h_ij is not equal to h_ji at indices ({}, {})", i, j);
+        }
+    }
+    // 3. check if norm <= beta'^2
+    // 4. check if Az is valid
+    // 5. check if <z, z> ?= sum(g_ij * c_i * c_j)
+    // 6. check if sum(<phi_i, z> * c_i) ?= sum(h_ij * c_i * c_j)
+    // 7. check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
+    // 8. check if u1 is valid
+    // 9. check if u2 is valid
+
 }
 
 #[cfg(test)]
 mod tests {
     use std::vec;
-
     use super::*;
-
     #[test]
     fn test_setup_prover() {
-        prove();
+        let (st, tr) = prove();
+        verify(st, tr);
     }
 
     #[test]
