@@ -169,50 +169,60 @@ fn generate_random_polynomial_ring(deg_bound_d: usize) -> PolynomialRing {
     }
 }
 
-fn decompose_poly_to_basis_form(
+// aggregate basis form of a vector of PolynomialRing
+fn aggregate_poly_vec_basis_form(poly_basis_form: &Vec<Vec<Vec<Zq>>>) -> Vec<Vec<PolynomialRing>> {
+    poly_basis_form
+        .iter()
+        .map(|poly_i_j_basis_form| {
+            let num_loop_needed = poly_i_j_basis_form.first().map_or(0, |v| v.len());
+            (0..num_loop_needed)
+                .map(|k| {
+                    let coefficients = poly_i_j_basis_form
+                        .iter()
+                        .map(|basis_part| basis_part.get(k).cloned().unwrap_or(Zq::from(0)))
+                        .collect();
+                    PolynomialRing { coefficients }
+                })
+                .collect()
+        })
+        .collect()
+}
+
+fn poly_vec_decompose_to_basis(poly: &Vec<PolynomialRing>, basis: Zq, digits: Zq) -> Vec<Vec<Vec<Zq>>> {
+    poly
+        .iter()
+        .map(|poly_i| ring_polynomial_to_basis(poly_i, basis, digits))
+        .collect::<Vec<Vec<Vec<Zq>>>>()
+}
+
+fn poly_matrix_decompose_to_basis(poly: &Vec<Vec<PolynomialRing>>, basis: Zq, digits: Zq) -> Vec<  Vec<Vec<Vec<Zq>>>> {
+    poly
+        .iter()
+        .map(|poly_i| poly_vec_decompose_to_basis(poly_i, basis, digits))
+        .collect::<Vec<Vec<Vec<Vec<Zq>>>>>()
+}
+
+fn poly_vec_decompose_and_aggregate(
+    poly: &Vec<PolynomialRing>,
+    basis: Zq,
+    digits: Zq,
+) -> Vec<Vec<PolynomialRing>> {
+    // Decompose each PolynomialRing into basis parts
+    let poly_basis_form = poly_vec_decompose_to_basis(poly, basis, digits);
+    aggregate_poly_vec_basis_form(&poly_basis_form)
+}
+
+
+fn poly_matrix_decompose_and_aggregate(
     poly: &Vec<Vec<PolynomialRing>>,
     basis: Zq,
     digits: Zq,
 ) -> Vec<Vec<Vec<PolynomialRing>>> {
     // Decompose h_ij into basis t_1 parts
-    let poly_basis_form: Vec<Vec<Vec<Vec<Zq>>>> = poly
-        .iter()
-        .map(|poly_i| {
-            poly_i.iter()
-                .map(|poly_i_j| ring_polynomial_to_basis(poly_i_j, basis, digits))
-                .collect::<Vec<Vec<Vec<Zq>>>>()
-        })
-        .collect::<Vec<Vec<Vec<Vec<Zq>>>>>();
+    let poly_basis_form = poly_matrix_decompose_to_basis(poly, basis, digits);
 
     // Pick elements at each position across all inner vectors and aggregate them
-    let mut poly_basis_form_aggregated: Vec<Vec<Vec<PolynomialRing>>> = Vec::new();
-    for (_i, poly_i_basis_form) in poly_basis_form.iter().enumerate() {
-        let mut row_results: Vec<Vec<PolynomialRing>> = Vec::new();
-        for (_j, poly_i_j_basis_form) in poly_i_basis_form.iter().enumerate() {
-            let mut row_results_j: Vec<PolynomialRing> = Vec::new();
-            // Get the number of basis parts and the number of loops needed
-            let num_basis_needed = poly_i_j_basis_form.len();
-            let num_loop_needed = poly_i_j_basis_form
-                .first()
-                .map_or(0, |v| v.len());
-            for k in 0..num_loop_needed {
-                let mut row_k: Vec<Zq> = Vec::new();
-                for basis_needed in 0..num_basis_needed {
-                    if let Some(num_to_be_pushed) = poly_i_j_basis_form.get(basis_needed).and_then(|v| v.get(k)) {
-                        row_k.push(num_to_be_pushed.clone());
-                    } else {
-                        row_k.push(Zq::from(0));
-                    }
-                }
-                row_results_j.push(PolynomialRing {
-                    coefficients: row_k,
-                });
-            } // finish poly_i_j_basis_form calculation
-            row_results.push(row_results_j);
-        }
-        poly_basis_form_aggregated.push(row_results);
-    }
-    poly_basis_form_aggregated
+    poly_basis_form.iter().map(aggregate_poly_vec_basis_form).collect()
 }
 
 // Calculate the sum of squared norms for a single PolynomialRing instance.
@@ -429,7 +439,7 @@ pub fn prove() -> (St, Tr) {
         // [[4, 1, 0], [7, 3, 0], [1, 9, 0], [8, 1, 1], [9, 5, 1], [9, 0, 1], [2, 7, 0]]
     // ]
 
-    let all_t_i_basis_form_aggregated = decompose_poly_to_basis_form(&t, basis, digits);
+    let all_t_i_basis_form_aggregated = poly_matrix_decompose_and_aggregate(&t, basis, digits);
     println!(
         "all_t_i_basis_form_aggregated: {:?}",
         all_t_i_basis_form_aggregated
@@ -463,7 +473,7 @@ pub fn prove() -> (St, Tr) {
     }
 
 
-    let g_matrix_aggregated = decompose_poly_to_basis_form(&g, basis, t2);
+    let g_matrix_aggregated = poly_matrix_decompose_and_aggregate(&g, basis, t2);
     println!("g_matrix_aggregated: {:?}", g_matrix_aggregated);
 
     // 2.3 calculate u1
@@ -793,7 +803,7 @@ pub fn prove() -> (St, Tr) {
         }
     }
 
-    let h_gar_poly_basis_form_aggregated = decompose_poly_to_basis_form(&h, basis, digits);
+    let h_gar_poly_basis_form_aggregated = poly_matrix_decompose_and_aggregate(&h, basis, digits);
     println!(
         "h_gar_poly_basis_form_aggregated: {:?}",
         h_gar_poly_basis_form_aggregated
@@ -1302,27 +1312,73 @@ mod tests {
         };
         let poly_input = vec![
             vec![poly1.clone(), poly2.clone()],
+            vec![poly1.clone(), poly2.clone()],
         ];
         let basis = Zq::from(10);
         let digits = Zq::from(3);
 
         // Act: Call the function to decompose the polynomial
-        let result = decompose_poly_to_basis_form(&poly_input, basis, digits);
+        let result = poly_matrix_decompose_and_aggregate(&poly_input, basis, digits);
 
-        let expected = vec![
+        let expected_row1 = vec![
             vec![
-                vec![
-                    PolynomialRing { coefficients: vec![Zq::from(3), Zq::from(6), Zq::from(9)] },
-                    PolynomialRing { coefficients: vec![Zq::from(2), Zq::from(5), Zq::from(8)] },
-                    PolynomialRing { coefficients: vec![Zq::from(1), Zq::from(4), Zq::from(7)] },
-                ],
-                vec![
-                    PolynomialRing { coefficients: vec![Zq::from(2), Zq::from(5), Zq::from(8)] },
-                    PolynomialRing { coefficients: vec![Zq::from(1), Zq::from(4), Zq::from(7)] },
-                    PolynomialRing { coefficients: vec![Zq::from(0), Zq::from(0), Zq::from(0)] },
-                ],
+                PolynomialRing { coefficients: vec![Zq::from(3), Zq::from(6), Zq::from(9)] },
+                PolynomialRing { coefficients: vec![Zq::from(2), Zq::from(5), Zq::from(8)] },
+                PolynomialRing { coefficients: vec![Zq::from(1), Zq::from(4), Zq::from(7)] },
+            ],
+            vec![
+                PolynomialRing { coefficients: vec![Zq::from(2), Zq::from(5), Zq::from(8)] },
+                PolynomialRing { coefficients: vec![Zq::from(1), Zq::from(4), Zq::from(7)] },
+                PolynomialRing { coefficients: vec![Zq::from(0), Zq::from(0), Zq::from(0)] },
             ],
         ];
+
+        let expected = vec![
+            expected_row1.clone(),
+            expected_row1.clone(),
+        ];
+        assert_eq!(result, expected, "The decomposition did not match the expected output.");
+    }
+
+    #[test]
+    fn test_decompose_poly_ring_vector_to_basis_form() {
+        // Arrange: Create sample input vector of PolynomialRing
+        let poly1 = PolynomialRing {
+            coefficients: vec![
+                Zq::from(123),
+                Zq::from(456),
+                Zq::from(789),
+            ],
+        };
+        let poly2 = PolynomialRing {
+            coefficients: vec![
+                Zq::from(12),
+                Zq::from(45),
+                Zq::from(78),
+            ],
+        };
+        let poly_vec = vec![poly1.clone(), poly2.clone()];
+        let basis = Zq::from(10);
+        let digits = Zq::from(3);
+
+        // Act: Call the decomposition function
+        let result = poly_vec_decompose_and_aggregate(&poly_vec, basis, digits);
+
+        // Define expected output
+        let expected = vec![
+            vec![
+                PolynomialRing { coefficients: vec![Zq::from(3), Zq::from(6), Zq::from(9)] },
+                PolynomialRing { coefficients: vec![Zq::from(2), Zq::from(5), Zq::from(8)] },
+                PolynomialRing { coefficients: vec![Zq::from(1), Zq::from(4), Zq::from(7)] },
+            ],
+            vec![
+                PolynomialRing { coefficients: vec![Zq::from(2), Zq::from(5), Zq::from(8)] },
+                PolynomialRing { coefficients: vec![Zq::from(1), Zq::from(4), Zq::from(7)] },
+                PolynomialRing { coefficients: vec![Zq::from(0), Zq::from(0), Zq::from(0)] },
+            ],
+        ];
+
+        // Assert
         assert_eq!(result, expected, "The decomposition did not match the expected output.");
     }
 
