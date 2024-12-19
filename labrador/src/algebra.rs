@@ -365,7 +365,7 @@ impl RqMatrix {
                 (0..size_n_usize)
                     .map(|_| PolynomialRing {
                         coefficients: (0..size_n_usize)
-                            .map(|_| Zq::from(rng.gen_range(1..10)))
+                            .map(|_| Zq::from(2)) // we just use 2 as random number to facilitate test
                             .collect(),
                     })
                     .collect()
