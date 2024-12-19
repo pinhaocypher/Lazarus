@@ -333,6 +333,150 @@ fn verify_inner_product_and_z_computation(witness_s: &Vec<Vec<PolynomialRing>>) 
     assert_eq!(z_z_inner_product, sum_g_ij_c_i_c_j);
 }
 
+// 4.3.1 calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
+fn compute_a_constraint_ct_aggr(
+    a_constraint_ct: &Vec<Vec<Vec<PolynomialRing>>>,
+    psi: &Vec<Vec<Zq>>,
+    size_k: Zq,
+    size_r: Zq,
+    constraint_num_l: Zq,
+    deg_bound_d: Zq,
+) -> Vec<Vec<Vec<PolynomialRing>>> {
+    let a_constraint_ct_aggr: Vec<Vec<Vec<PolynomialRing>>> = (0..size_k.value())
+        .map(|k| {
+            let psi_k = &psi[k];
+            (0..size_r.value())
+                .map(|i| {
+                    (0..size_r.value())
+                        .map(|j| {
+                            (0..constraint_num_l.value())
+                                .map(|l| &a_constraint_ct[l][i][j] * psi_k[l])
+                                .fold(
+                                    PolynomialRing {
+                                        coefficients: vec![Zq::from(0); deg_bound_d.value()],
+                                    },
+                                    |acc, x| acc + x,
+                                )
+                        })
+                        .collect::<Vec<PolynomialRing>>()
+                })
+                .collect::<Vec<Vec<PolynomialRing>>>()
+        })
+        .collect();
+    a_constraint_ct_aggr
+}
+
+// 4.3.2 calculate phi_i^{''(k)} =
+//       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
+//       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
+fn compute_phi_ct_aggr(
+    phi_constraint_ct: &Vec<Vec<Vec<PolynomialRing>>>,
+    pai: &Vec<Vec<Vec<Zq>>>,
+    size_k: Zq,
+    size_r: Zq,
+    constraint_num_l: Zq,
+    deg_bound_d: Zq,
+    size_n: Zq,
+    double_lambda: Zq,
+    psi: &Vec<Vec<Zq>>,
+    omega: &Vec<Vec<Zq>>,
+) -> Vec<Vec<Vec<PolynomialRing>>> {
+    let phi_ct_aggr: Vec<Vec<Vec<PolynomialRing>>> = (0..size_k.value()).map(|k| {
+        (0..size_r.value()).map(|i| {
+            // Part 1: sum(psi_l^(k) * phi_constraint_ct[l][i] for all l)
+            let part1: Vec<PolynomialRing> = (0..constraint_num_l.value()).map(|l| {
+                let psi = psi[k][l];
+                phi_constraint_ct[l][i].iter().map(|p| p * psi).collect::<Vec<PolynomialRing>>()
+            }).fold(
+                vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
+                |acc, product| acc.iter().zip(product.iter()).map(|(a, b)| a + b).collect()
+            );
+
+            // Part 2: sum(omega_j^(k) * sigma_{-1} * pi_i^{j} for all j)
+            let part2: Vec<PolynomialRing> = (0..double_lambda.value()).map(|j| {
+                let omega = omega[k][j];
+                pai[i][j].chunks(deg_bound_d.value()).take(size_n.value()).map(|chunk| {
+                    let pai_poly = PolynomialRing { coefficients: chunk.to_vec() };
+                    conjugation_automorphism(&pai_poly) * omega
+                }).collect::<Vec<PolynomialRing>>()
+            }).fold(
+                vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
+                |acc, chunks_ca| acc.iter().zip(chunks_ca.iter()).map(|(a, b)| a + b).collect()
+            );
+
+            // Sum part1 and part2 element-wise
+            part1.iter().zip(part2.iter()).map(|(a, b)| a + b).collect::<Vec<PolynomialRing>>()
+        }).collect::<Vec<Vec<PolynomialRing>>>()
+    }).collect();
+    phi_ct_aggr
+}
+
+// 4.3.3 calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>)
+fn compute_b_ct_aggr(
+    a_constraint_ct_aggr: &Vec<Vec<Vec<PolynomialRing>>>,
+    phi_ct_aggr: &Vec<Vec<Vec<PolynomialRing>>>,
+    size_k: Zq,
+    size_r: Zq,
+    deg_bound_d: Zq,
+    witness_s: &Vec<Vec<PolynomialRing>>,
+) -> Vec<PolynomialRing> {
+    let b_ct_aggr: Vec<PolynomialRing> = (0..size_k.value())
+        .map(|k| {
+            (0..size_r.value())
+                .map(|i| {
+                    (0..size_r.value())
+                        .map(|j| &a_constraint_ct_aggr[k][i][j] * inner_product_polynomial_ring_vector(&witness_s[i], &witness_s[j]))
+                        .fold(
+                            PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] },
+                            |acc, x| acc + x
+                        )
+                        + inner_product_polynomial_ring_vector(&phi_ct_aggr[k][i], &witness_s[i])
+                })
+                .fold(
+                    PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] },
+                    |acc, x| acc + x
+                )
+        })
+        .collect();
+    b_ct_aggr
+}
+
+// 5.2 phi_i = sum(alpha_k * phi_i) + beta_k * phi_i^{''(k)}
+fn compute_phi_aggr(
+    phi_constraint: &Vec<Vec<Vec<PolynomialRing>>>,
+    phi_ct_aggr: &Vec<Vec<Vec<PolynomialRing>>>,
+    constraint_num_k: Zq,
+    alpha: &Vec<PolynomialRing>,
+    beta: &Vec<PolynomialRing>,
+    size_r: Zq,
+    size_n: Zq,
+    deg_bound_d: Zq,
+    size_k: Zq,
+) -> Vec<Vec<PolynomialRing>> {
+    let phi_aggr: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
+        // Part 1: sum(alpha_k * phi_i)
+        let part1: Vec<PolynomialRing> = (0..constraint_num_k.value()).map(|k| {
+            let alpha = &alpha[k];
+            phi_constraint[k][i].iter().map(|p| p * alpha).collect::<Vec<PolynomialRing>>()
+        }).fold(
+            vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
+            |acc, product| acc.iter().zip(product.iter()).map(|(a, b)| a + b).collect()
+        );
+
+        // Part 2: sum(beta_k * phi_i^{''(k)})
+        let part2: Vec<PolynomialRing> = (0..size_k.value()).map(|k| {
+            let beta = &beta[k];
+            phi_ct_aggr[k][i].iter().map(|p| p * beta).collect::<Vec<PolynomialRing>>()
+        }).fold(
+            vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
+            |acc, product| acc.iter().zip(product.iter()).map(|(a, b)| a + b).collect()
+        );
+        // Sum part1 and part2 element-wise
+        part1.iter().zip(part2.iter()).map(|(a, b)| a + b).collect::<Vec<PolynomialRing>>()
+    }).collect();
+    phi_aggr
+}
+
 #[time_profiler()]
 pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<Vec<Vec<RqMatrix>>>, d_matrix: &Vec<Vec<Vec<RqMatrix>>>) -> (St, Tr) {
     // s is a vector of size r. each s_i is a PolynomialRing<Zq> with n coefficients
@@ -688,27 +832,14 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
 
     // 4.3 caculate b^{''(k)}
     // 4.3.1 calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
-    let a_constraint_ct_aggr: Vec<Vec<Vec<PolynomialRing>>> = (0..size_k.value())
-        .map(|k| {
-            let psi_k = &psi[k];
-            (0..size_r.value())
-                .map(|i| {
-                    (0..size_r.value())
-                        .map(|j| {
-                            (0..constraint_num_l.value())
-                                .map(|l| &a_constraint_ct[l][i][j] * psi_k[l])
-                                .fold(
-                                    PolynomialRing {
-                                        coefficients: vec![Zq::from(0); deg_bound_d.value()],
-                                    },
-                                    |acc, x| acc + x,
-                                )
-                        })
-                        .collect::<Vec<PolynomialRing>>()
-                })
-                .collect::<Vec<Vec<PolynomialRing>>>()
-        })
-        .collect();
+    let a_constraint_ct_aggr = compute_a_constraint_ct_aggr(
+        &a_constraint_ct,
+        &psi,
+        size_k,
+        size_r,
+        constraint_num_l,
+        deg_bound_d,
+    );
     println!("a_constraint_ct_aggr: {:?}", a_constraint_ct_aggr);
     assert_eq!(a_constraint_ct_aggr.len(), size_k.value());
     assert_eq!(a_constraint_ct_aggr[0].len(), size_r.value());
@@ -716,56 +847,31 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     // 4.3.2 calculate phi_i^{''(k)} =
     //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
     //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
-    let phi_ct_aggr: Vec<Vec<Vec<PolynomialRing>>> = (0..size_k.value()).map(|k| {
-        (0..size_r.value()).map(|i| {
-            // Part 1: sum(psi_l^(k) * phi_constraint_ct[l][i] for all l)
-            let part1: Vec<PolynomialRing> = (0..constraint_num_l.value()).map(|l| {
-                let psi = psi[k][l];
-                phi_constraint_ct[l][i].iter().map(|p| p * psi).collect::<Vec<PolynomialRing>>()
-            }).fold(
-                vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
-                |acc, product| acc.iter().zip(product.iter()).map(|(a, b)| a + b).collect()
-            );
-
-            // Part 2: sum(omega_j^(k) * sigma_{-1} * pi_i^{j} for all j)
-            let part2: Vec<PolynomialRing> = (0..double_lambda.value()).map(|j| {
-                let omega = omega[k][j];
-                pai[i][j].chunks(deg_bound_d.value()).take(size_n.value()).map(|chunk| {
-                    let pai_poly = PolynomialRing { coefficients: chunk.to_vec() };
-                    conjugation_automorphism(&pai_poly) * omega
-                }).collect::<Vec<PolynomialRing>>()
-            }).fold(
-                vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
-                |acc, chunks_ca| acc.iter().zip(chunks_ca.iter()).map(|(a, b)| a + b).collect()
-            );
-
-            // Sum part1 and part2 element-wise
-            part1.iter().zip(part2.iter()).map(|(a, b)| a + b).collect::<Vec<PolynomialRing>>()
-        }).collect::<Vec<Vec<PolynomialRing>>>()
-    }).collect();
+    let phi_ct_aggr = compute_phi_ct_aggr(
+        &phi_constraint_ct,
+        &pai,
+        size_k,
+        size_r,
+        constraint_num_l,
+        deg_bound_d,
+        size_n,
+        double_lambda,
+        &psi,
+        &omega
+    );
     println!("phi_ct_aggr: {:?}", phi_ct_aggr);
     assert_eq!(phi_ct_aggr.len(), size_k.value());
     assert_eq!(phi_ct_aggr[0].len(), size_r.value());
 
     // 4.3.3 calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>)
-    let b_ct_aggr: Vec<PolynomialRing> = (0..size_k.value())
-        .map(|k| {
-            (0..size_r.value())
-                .map(|i| {
-                    (0..size_r.value())
-                        .map(|j| &a_constraint_ct_aggr[k][i][j] * inner_product_polynomial_ring_vector(&witness_s[i], &witness_s[j]))
-                        .fold(
-                            PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] },
-                            |acc, x| acc + x
-                        )
-                        + inner_product_polynomial_ring_vector(&phi_ct_aggr[k][i], &witness_s[i])
-                })
-                .fold(
-                    PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] },
-                    |acc, x| acc + x
-                )
-        })
-        .collect();
+    let b_ct_aggr = compute_b_ct_aggr(
+        &a_constraint_ct_aggr,
+        &phi_ct_aggr,
+        size_k,
+        size_r,
+        deg_bound_d,
+        &witness_s,
+    );
     println!("b_ct_aggr: {:?}", b_ct_aggr);
     assert_eq!(b_ct_aggr.len(), size_k.value());
 
@@ -797,30 +903,21 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     let alpha: Vec<PolynomialRing> = (0..constraint_num_k.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
     let beta: Vec<PolynomialRing> = (0..size_k.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
     // 5.2 phi_i = sum(alpha_k * phi_i) + beta_k * phi_i^{''(k)}
-    let phi_aggr: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
-        // Part 1: sum(alpha_k * phi_i)
-        let part1: Vec<PolynomialRing> = (0..constraint_num_k.value()).map(|k| {
-            let alpha = &alpha[k];
-            phi_constraint[k][i].iter().map(|p| p * alpha).collect::<Vec<PolynomialRing>>()
-        }).fold(
-            vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
-            |acc, product| acc.iter().zip(product.iter()).map(|(a, b)| a + b).collect()
-        );
-
-        // Part 2: sum(beta_k * phi_i^{''(k)})
-        let part2: Vec<PolynomialRing> = (0..size_k.value()).map(|k| {
-            let beta = &beta[k];
-            phi_ct_aggr[k][i].iter().map(|p| p * beta).collect::<Vec<PolynomialRing>>()
-        }).fold(
-            vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
-            |acc, product| acc.iter().zip(product.iter()).map(|(a, b)| a + b).collect()
-        );
-        // Sum part1 and part2 element-wise
-        part1.iter().zip(part2.iter()).map(|(a, b)| a + b).collect::<Vec<PolynomialRing>>()
-    }).collect();
+    let phi_aggr = compute_phi_aggr(
+        &phi_constraint,
+        &phi_ct_aggr,
+        constraint_num_k,
+        &alpha,
+        &beta,
+        size_r,
+        size_n,
+        deg_bound_d,
+        size_k,
+    );
     println!("phi_aggr: {:?}", phi_aggr);
     assert_eq!(phi_aggr.len(), size_r.value());
     assert_eq!(phi_aggr[0].len(), size_n.value());
+
     // 5.3 Calculate garbage polynomial h_ij = 1/2 * (<phi_i, s_j> + <phi_j, s_i>)
     let h: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
         (0..size_r.value()).map(|j| {
