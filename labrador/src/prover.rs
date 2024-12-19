@@ -276,7 +276,7 @@ struct Tr {
     alpha: Vec<PolynomialRing>, // Replace with the actual type
     beta: Vec<PolynomialRing>, // Replace with the actual type
     u2: Vec<PolynomialRing>,
-    c: Vec<Vec<Zq>>,
+    c: Vec<PolynomialRing>,
     z: Vec<PolynomialRing>,
     t: Vec<Vec<PolynomialRing>>, // Replace with the actual type
     g: Vec<Vec<PolynomialRing>>, // Replace with the actual type
@@ -864,13 +864,12 @@ pub fn prove() -> (St, Tr) {
     // 6. GOAL: calculate z (Amortized Opening)
     // 6.1 c_i is randomly chosen from C, i = 1..r
     // todo: get c from challenge space, refer to paper page 6
-    let c: Vec<Vec<Zq>> = (0..size_r.value()).map(|_| (0..size_n.value()).map(|_| Zq::new(rng.gen_range(0..10))).collect()).collect();
+    let c: Vec<PolynomialRing> = (0..size_r.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
     // 6.2 calculate z = sum(c_i * s_i) for all i = 1..r
-    let z: Vec<PolynomialRing> = (0..size_r.value()).map(|i| {
-        let c_i = &c[i];
-        let s_i = &witness_s[i];
-        c_i.iter().zip(s_i.iter()).map(|(c, s)| s * *c).fold(PolynomialRing { coefficients: vec![Zq::from(0); size_n.value()] }, |acc, x| acc + x)
-    }).collect();
+    let z: Vec<PolynomialRing> = witness_s.iter().zip(c.iter()).map(|(s_i, c_i)| poly_vec_times_poly(&s_i, &c_i)).fold(
+        vec![PolynomialRing { coefficients: vec![Zq::from(0); size_n.value()] }; size_r.value()],
+        |acc, x: Vec<PolynomialRing>| poly_vec_add_poly_vec(&acc, &x)
+    );
     println!("z: {:?}", z);
 
     // Send z, t_i, g_ij, h_ij to verifier
