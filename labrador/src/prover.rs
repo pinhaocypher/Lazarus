@@ -285,7 +285,7 @@ struct Tr {
 
 
 #[time_profiler()]
-pub fn prove() -> (St, Tr) {
+pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<Vec<Vec<RqMatrix>>>, d_matrix: &Vec<Vec<Vec<RqMatrix>>>) -> (St, Tr) {
     // s is a vector of size r. each s_i is a PolynomialRing<Zq> with n coefficients
     let size_r = Zq::new(3); // r: Number of witness elements
     let size_n = Zq::new(5); // n
@@ -301,17 +301,6 @@ pub fn prove() -> (St, Tr) {
     let log_q = Zq::new(32);
     let deg_bound_d = Zq::new(8); // random polynomial degree bound
     let beta = Zq::new(70); // Example value for beta
-    // 0. setup
-    // matrices A, B, C, D are common reference string
-    let (a_matrix, b_matrix, c_matrix, d_matrix) = setup(
-        size_n,
-        size_r,
-        t1,
-        t2,
-        kappa,
-        kappa1,
-        kappa2,
-    );
 
     let witness_s: Vec<Vec<PolynomialRing>> = (0..size_r.value())
         .map(|_| {
@@ -903,7 +892,7 @@ pub fn prove() -> (St, Tr) {
     return (st, tr);
 }
 
-fn verify(st: St, tr: Tr) {
+fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<Vec<Vec<RqMatrix>>>, d_matrix: &Vec<Vec<Vec<RqMatrix>>>) {
     // same parameters as in the prover
     let size_r = Zq::new(3); // r: Number of witness elements
     let size_n = Zq::new(5); // n
@@ -988,6 +977,15 @@ fn verify(st: St, tr: Tr) {
     assert!(norm_sum <= new_beta.pow(2));
 
     // 4. check if Az is valid
+    let a_times_z: Vec<PolynomialRing> = matrix_poly_times_poly_vector(&a_matrix.values, &z);
+    println!("a_times_z: {:?}", a_times_z);
+    // calculate sum(ci * ti)
+    let sum_c_times_t: Vec<PolynomialRing> = t.iter().zip(c.iter()).map(|(s_i, c_i)| poly_vec_times_poly(&s_i, &c_i)).fold(
+        vec![PolynomialRing { coefficients: vec![Zq::from(0); size_n.value()] }; size_r.value()],
+        |acc, x: Vec<PolynomialRing>| poly_vec_add_poly_vec(&acc, &x)
+    );
+    println!("sum_c_times_t: {:?}", sum_c_times_t);
+    assert_eq!(a_times_z, sum_c_times_t);
     // 5. check if <z, z> ?= sum(g_ij * c_i * c_j)
     // 6. check if sum(<phi_i, z> * c_i) ?= sum(h_ij * c_i * c_j)
     // 7. check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
@@ -1002,8 +1000,29 @@ mod tests {
     use super::*;
     #[test]
     fn test_setup_prover() {
-        let (st, tr) = prove();
-        verify(st, tr);
+        let size_r = Zq::new(3); // r: Number of witness elements
+        let size_n = Zq::new(5); // n
+        let digits = Zq::new(3); // t1
+        let t1 = digits;
+        let t2 = digits;
+        let kappa = Zq::new(3); // Example size
+        let kappa1 = Zq::from(5);
+        let kappa2 = Zq::from(5);
+
+        // 0. setup
+        // matrices A, B, C, D are common reference string
+        let (a_matrix, b_matrix, c_matrix, d_matrix) = setup(
+            size_n,
+            size_r,
+            t1,
+            t2,
+            kappa,
+            kappa1,
+            kappa2,
+        );
+        // todo: st should be publicly shared
+        let (st, tr) = prove(&a_matrix, &b_matrix, &c_matrix, &d_matrix);
+        verify(st, tr, &a_matrix, &b_matrix, &c_matrix, &d_matrix);
     }
 
     #[test]
