@@ -296,6 +296,42 @@ struct Tr {
     h: Vec<Vec<PolynomialRing>>,
 }
 
+fn verify_inner_product_and_z_computation(witness_s: &Vec<Vec<PolynomialRing>>) {
+    let deg_bound_d = Zq::new(8); // random polynomial degree bound
+    let size_r = Zq::from(witness_s.len());
+    let g: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
+        (0..size_r.value()).map(|j| {
+            let s_i = &witness_s[i];
+            let s_j = &witness_s[j];
+            inner_product_polynomial_ring_vector(&s_i, &s_j)
+        }).collect::<Vec<PolynomialRing>>()
+    }).collect();
+
+    let c: Vec<PolynomialRing> = (0..size_r.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
+    // 6.2 calculate z = sum(c_i * s_i) for all i = 1..r
+    let z: Vec<PolynomialRing> = inner_product_poly_matrix_and_poly_vector(&witness_s, &c);
+    println!("z: {:?}", z);
+    // Send z, t_i, g_ij, h_ij to verifier
+    // transcript.add(z);
+    // return transcript;
+
+    // check if <z, z> ?= sum(g_ij * c_i * c_j)
+    let z_z_inner_product = inner_product_polynomial_ring_vector(&z, &z);
+    println!("z_z_inner_product: {:?}", z_z_inner_product);
+
+    let mut sum_g_ij_c_i_c_j = PolynomialRing { coefficients: vec![Zq::from(0); 1] };
+    for i in 0..size_r.value() {
+        for j in 0..size_r.value() {
+            let g_ij = &g[i][j]; // Borrow g[i][j] instead of moving it
+            let c_i = &c[i];
+            let c_j = &c[j];
+            sum_g_ij_c_i_c_j = sum_g_ij_c_i_c_j + (g_ij * c_i * c_j);
+        }
+    }
+
+    println!("sum_g_ij_c_i_c_j: {:?}", sum_g_ij_c_i_c_j);
+    assert_eq!(z_z_inner_product, sum_g_ij_c_i_c_j);
+}
 
 #[time_profiler()]
 pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<Vec<Vec<RqMatrix>>>, d_matrix: &Vec<Vec<Vec<RqMatrix>>>) -> (St, Tr) {
@@ -479,7 +515,6 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
             );
         }
     }
-
 
     let g_matrix_aggregated = poly_matrix_decompose_and_aggregate(&g, basis, t2);
     println!("g_matrix_aggregated: {:?}", g_matrix_aggregated);
@@ -992,7 +1027,23 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
     let sum_c_times_t: Vec<PolynomialRing> = inner_product_poly_matrix_and_poly_vector(&t, &c);
     println!("sum_c_times_t: {:?}", sum_c_times_t);
     assert_eq!(a_times_z, sum_c_times_t);
+
     // 5. check if <z, z> ?= sum(g_ij * c_i * c_j)
+    let z_z_inner_product = inner_product_polynomial_ring_vector(&z, &z);
+    println!("z_z_inner_product: {:?}", z_z_inner_product);
+
+    let mut sum_g_ij_c_i_c_j = PolynomialRing { coefficients: vec![Zq::from(0); 1] };
+    for i in 0..size_r.value() {
+        for j in 0..size_r.value() {
+            let g_ij = &g[i][j]; // Borrow g[i][j] instead of moving it
+            let c_i = &c[i];
+            let c_j = &c[j];
+            sum_g_ij_c_i_c_j = sum_g_ij_c_i_c_j + (g_ij * c_i * c_j);
+        }
+    }
+
+    println!("sum_g_ij_c_i_c_j: {:?}", sum_g_ij_c_i_c_j);
+    assert_eq!(z_z_inner_product, sum_g_ij_c_i_c_j);
     // 6. check if sum(<phi_i, z> * c_i) ?= sum(h_ij * c_i * c_j)
     // 7. check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
     // 8. check if u1 is valid
@@ -1004,6 +1055,7 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
 mod tests {
     use std::vec;
     use super::*;
+
     #[test]
     fn test_setup_prover() {
         let size_r = Zq::new(3); // r: Number of witness elements
@@ -1029,6 +1081,66 @@ mod tests {
         // todo: st should be publicly shared
         let (st, tr) = prove(&a_matrix, &b_matrix, &c_matrix, &d_matrix);
         verify(st, tr, &a_matrix, &b_matrix, &c_matrix, &d_matrix);
+    }
+
+    #[test]
+    fn test_inner_product_and_z_computation() {
+        let deg_bound_d = Zq::new(8); // random polynomial degree bound
+        // this test it to check: <z, z> ?= sum(g_ij * c_i * c_j)
+        let witness_s = vec![
+            vec![
+                generate_random_polynomial_ring(deg_bound_d.value()),
+                generate_random_polynomial_ring(deg_bound_d.value()),
+                generate_random_polynomial_ring(deg_bound_d.value()),
+                generate_random_polynomial_ring(deg_bound_d.value()),
+            ],
+            vec![
+                generate_random_polynomial_ring(deg_bound_d.value()),
+                generate_random_polynomial_ring(deg_bound_d.value()),
+                generate_random_polynomial_ring(deg_bound_d.value()),
+                generate_random_polynomial_ring(deg_bound_d.value()),
+            ],
+            vec![
+                generate_random_polynomial_ring(deg_bound_d.value()),
+                generate_random_polynomial_ring(deg_bound_d.value()),
+                generate_random_polynomial_ring(deg_bound_d.value()),
+                generate_random_polynomial_ring(deg_bound_d.value()),
+            ],
+        ];
+        // verify_inner_product_and_z_computation(&witness_s);
+        let size_r = Zq::from(witness_s.len());
+        let size_n = Zq::from(witness_s[0].len());
+        let g: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
+            (0..size_r.value()).map(|j| {
+                let s_i = &witness_s[i];
+                let s_j = &witness_s[j];
+                assert_eq!(s_i.len(), size_n.value(), "s_i must have the same length as size_n");
+                assert_eq!(s_j.len(), size_n.value(), "s_j must have the same length as size_n");
+                inner_product_polynomial_ring_vector(&s_i, &s_j)
+            }).collect::<Vec<PolynomialRing>>()
+        }).collect();
+
+        let c: Vec<PolynomialRing> = (0..size_r.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
+        // 6.2 calculate z = sum(c_i * s_i) for all i = 1..r
+        let z: Vec<PolynomialRing> = inner_product_poly_matrix_and_poly_vector(&witness_s, &c);
+        println!("z: {:?}", z);
+
+        // check if <z, z> ?= sum(g_ij * c_i * c_j)
+        let z_z_inner_product = inner_product_polynomial_ring_vector(&z, &z);
+        println!("z_z_inner_product: {:?}", z_z_inner_product);
+
+        let mut sum_g_ij_c_i_c_j = PolynomialRing { coefficients: vec![Zq::from(0); 1] };
+        for i in 0..size_r.value() {
+            for j in 0..size_r.value() {
+                let g_ij = &g[i][j]; // Borrow g[i][j] instead of moving it
+                let c_i = &c[i];
+                let c_j = &c[j];
+                sum_g_ij_c_i_c_j = sum_g_ij_c_i_c_j + (g_ij * c_i * c_j);
+            }
+        }
+
+        println!("sum_g_ij_c_i_c_j: {:?}", sum_g_ij_c_i_c_j);
+        assert_eq!(z_z_inner_product, sum_g_ij_c_i_c_j);
     }
 
     #[test]
