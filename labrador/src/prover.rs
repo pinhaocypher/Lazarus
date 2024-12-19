@@ -1601,4 +1601,40 @@ mod tests {
         let expected = Zq::from(364);
         assert_eq!(result, expected, "poly_3d_norm_squared did not return the correct sum of squared norms");
     }
+
+    #[test]
+    fn test_inner_product_polynomial_ring_vector() {
+        // Define sample PolynomialRing vectors
+        let a = vec![
+            PolynomialRing {
+                coefficients: vec![Zq::from(1), Zq::from(2), Zq::from(3)],
+            },
+            PolynomialRing {
+                coefficients: vec![Zq::from(4), Zq::from(5), Zq::from(6)],
+            },
+        ];
+        let b = vec![
+            PolynomialRing {
+                coefficients: vec![Zq::from(7), Zq::from(8), Zq::from(9)],
+            },
+            PolynomialRing {
+                coefficients: vec![Zq::from(10), Zq::from(11), Zq::from(12)],
+            },
+        ];
+        // (1 + 2x + 3x^2) * (7 + 8x + 9x^2) + (4 + 5x + 6x^2) * (10 + 11x + 12x^2)
+        // = (7 + 22x + 46x^2 + 42x^3 + 27x^4) + (40 + 94x + 163x^2 + 126x^3 + 72x^4)
+        // = 47 + 116x + 209x^2 + 168x^3 + 99x^4
+        let result = inner_product_polynomial_ring_vector(&a, &b);
+        let expected = PolynomialRing {
+            coefficients: vec![
+                Zq::from(47),  // 47
+                Zq::from(116), // 116
+                Zq::from(209), // 209
+                Zq::from(168), // 168
+                Zq::from(99),  // 99
+            ],
+        };
+
+        assert_eq!(result, expected);
+    }
 }
