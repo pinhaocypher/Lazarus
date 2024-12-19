@@ -285,7 +285,7 @@ struct Tr {
     p: Vec<Zq>, // Replace with the actual type
     psi: Vec<Vec<Zq>>, // Replace with the actual type
     omega: Vec<Vec<Zq>>, // Replace with the actual type
-    b_aggr: Vec<PolynomialRing>, // Replace with the actual type
+    b_ct_aggr: Vec<PolynomialRing>, // Replace with the actual type
     alpha: Vec<PolynomialRing>, // Replace with the actual type
     beta: Vec<PolynomialRing>, // Replace with the actual type
     u2: Vec<PolynomialRing>,
@@ -748,7 +748,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     assert_eq!(phi_ct_aggr[0].len(), size_r.value());
 
     // 4.3.3 calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>)
-    let b_aggr: Vec<PolynomialRing> = (0..size_k.value())
+    let b_ct_aggr: Vec<PolynomialRing> = (0..size_k.value())
         .map(|k| {
             (0..size_r.value())
                 .map(|i| {
@@ -766,14 +766,14 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
                 )
         })
         .collect();
-    println!("b_aggr: {:?}", b_aggr);
-    assert_eq!(b_aggr.len(), size_k.value());
+    println!("b_ct_aggr: {:?}", b_ct_aggr);
+    assert_eq!(b_ct_aggr.len(), size_k.value());
 
     // todo: send b^{''(k)} to verifier
 
     // Verifier check: b_0^{''(k)} ?= <⟨omega^(k),p⟩> + sum(psi_l^(k) * b_0^{'(l)}) for all l = 1..L
     for k in 0..size_k.value() {
-        let b_k_0_from_poly: Zq = b_aggr[k].coefficients[0];
+        let b_k_0_from_poly: Zq = b_ct_aggr[k].coefficients[0];
         // sum(psi_l^(k) * b_0^{'(l)}) for all l = 1..L
         let mut b_k_0_computed: Zq = (0..constraint_num_l.value()).map(|l| {
             let psi_k_l = psi[k][l];
@@ -923,7 +923,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
         p,
         psi,
         omega,
-        b_aggr,
+        b_ct_aggr,
         alpha,
         beta,
         u2,
@@ -968,7 +968,7 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
         p,
         psi,
         omega,
-        b_aggr,
+        b_ct_aggr,
         alpha,
         beta,
         u2,
