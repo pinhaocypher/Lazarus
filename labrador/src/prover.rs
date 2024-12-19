@@ -1321,6 +1321,28 @@ mod tests {
     }
 
     #[test]
+    fn test_inner_product_zq_vector() {
+        // Arrange
+        let a = vec![
+            Zq::from(1),
+            Zq::from(2),
+            Zq::from(3),
+        ];
+        let b = vec![
+            Zq::from(4),
+            Zq::from(5),
+            Zq::from(6),
+        ];
+
+        // Act
+        let result = inner_product_zq_vector(&a, &b);
+
+        // Assert
+        let expected = (Zq::from(1) * Zq::from(4)) + (Zq::from(2) * Zq::from(5)) + (Zq::from(3) * Zq::from(6));
+        assert_eq!(result, expected, "inner_product_zq_vector did not return the correct result");
+    }
+
+    #[test]
     fn test_inner_product_poly_matrix_and_poly_vector() {
         // Arrange
         let poly_matrix = vec![
