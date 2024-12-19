@@ -456,7 +456,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     assert_eq!(g.len(), size_r.value());
     assert_eq!(g[0].len(), size_r.value());
     for i in 0..size_r.value() {
-        for j in (i + 1)..size_r.value() {
+        for j in 0..size_r.value() {
             assert_eq!(
                 g[i][j],
                 g[j][i],
