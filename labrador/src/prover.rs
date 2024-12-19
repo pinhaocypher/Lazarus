@@ -37,6 +37,17 @@ fn inner_product_zq_vector(a: &Vec<Zq>, b: &Vec<Zq>) -> Zq {
         .sum()
 }
 
+// a: Vec<Vec<PolynomialRing>>, b: Vec<PolynomialRing>
+// calculate c = sum(c_i), c_i = poly_vec_times_poly(a_i, b_i)
+// c: Vec<PolynomialRing>
+fn inner_product_poly_matrix_and_poly_vector(poly_matrix: &Vec<Vec<PolynomialRing>>, poly_vector: &Vec<PolynomialRing>) -> Vec<PolynomialRing> {
+    poly_matrix.iter().zip(poly_vector.iter()).map(
+        |(poly_matrix_row, poly_vector_element)| poly_vec_times_poly(&poly_matrix_row, &poly_vector_element)
+    ).fold(
+        vec![PolynomialRing { coefficients: vec![Zq::from(0); 1] }; poly_matrix.len()],
+        |acc, x: Vec<PolynomialRing>| poly_vec_add_poly_vec(&acc, &x)
+    )
+}
 // Function to calculate b^(k)
 fn calculate_b_constraint(
     s: &Vec<Vec<PolynomialRing>>,
@@ -855,12 +866,8 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     // todo: get c from challenge space, refer to paper page 6
     let c: Vec<PolynomialRing> = (0..size_r.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
     // 6.2 calculate z = sum(c_i * s_i) for all i = 1..r
-    let z: Vec<PolynomialRing> = witness_s.iter().zip(c.iter()).map(|(s_i, c_i)| poly_vec_times_poly(&s_i, &c_i)).fold(
-        vec![PolynomialRing { coefficients: vec![Zq::from(0); size_n.value()] }; size_r.value()],
-        |acc, x: Vec<PolynomialRing>| poly_vec_add_poly_vec(&acc, &x)
-    );
+    let z: Vec<PolynomialRing> = inner_product_poly_matrix_and_poly_vector(&witness_s, &c);
     println!("z: {:?}", z);
-
     // Send z, t_i, g_ij, h_ij to verifier
     // transcript.add(z);
     // return transcript;
@@ -980,10 +987,7 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
     let a_times_z: Vec<PolynomialRing> = matrix_poly_times_poly_vector(&a_matrix.values, &z);
     println!("a_times_z: {:?}", a_times_z);
     // calculate sum(ci * ti)
-    let sum_c_times_t: Vec<PolynomialRing> = t.iter().zip(c.iter()).map(|(s_i, c_i)| poly_vec_times_poly(&s_i, &c_i)).fold(
-        vec![PolynomialRing { coefficients: vec![Zq::from(0); size_n.value()] }; size_r.value()],
-        |acc, x: Vec<PolynomialRing>| poly_vec_add_poly_vec(&acc, &x)
-    );
+    let sum_c_times_t: Vec<PolynomialRing> = inner_product_poly_matrix_and_poly_vector(&t, &c);
     println!("sum_c_times_t: {:?}", sum_c_times_t);
     assert_eq!(a_times_z, sum_c_times_t);
     // 5. check if <z, z> ?= sum(g_ij * c_i * c_j)
@@ -1314,6 +1318,41 @@ mod tests {
         };
 
         assert_eq!(result.coefficients, expected.coefficients);
+    }
+
+    #[test]
+    fn test_inner_product_poly_matrix_and_poly_vector() {
+        // Arrange
+        let poly_matrix = vec![
+            vec![
+                PolynomialRing { coefficients: vec![Zq::from(1), Zq::from(2)] },
+                PolynomialRing { coefficients: vec![Zq::from(3), Zq::from(4)] },
+            ],
+            vec![
+                PolynomialRing { coefficients: vec![Zq::from(5), Zq::from(6)] },
+                PolynomialRing { coefficients: vec![Zq::from(7), Zq::from(8)] },
+            ],
+        ];
+        let poly_vector = vec![
+            PolynomialRing { coefficients: vec![Zq::from(9), Zq::from(10)] },
+            PolynomialRing { coefficients: vec![Zq::from(11), Zq::from(12)] },
+        ];
+
+        // Expected Calculation:
+        // u = sum D_ij * h_ij^(k) for all k = 1..(t1-1)
+        // For this test case:
+        // Result[0] = (1+2x) * (9+10x) + (5+6x) * (11+12x) = 64 + 154x + 92x^2
+        // Result[1] = (3+4x) * (9+10x) + (7+8x) * (11+12x) = 104 + 238x + 136x^2
+        let expected = vec![
+            PolynomialRing { coefficients: vec![Zq::from(64), Zq::from(154), Zq::from(92)] },
+            PolynomialRing { coefficients: vec![Zq::from(104), Zq::from(238), Zq::from(136)] },
+        ];
+
+        // Act
+        let result = inner_product_poly_matrix_and_poly_vector(&poly_matrix, &poly_vector);
+
+        // Assert
+        assert_eq!(result, expected, "The inner product of the polynomial matrix and vector did not produce the expected result.");
     }
 
     #[test]
