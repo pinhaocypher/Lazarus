@@ -57,18 +57,12 @@ fn calculate_b_constraint(
 }
 
 // calculate matrix times vector of PolynomialRing
-fn matrix_times_vector_poly(a: &RqMatrix, s_i: &Vec<PolynomialRing>) -> Vec<PolynomialRing> {
-    a.values
+fn matrix_poly_times_poly_vector(poly_matrix: &Vec<Vec<PolynomialRing>>, poly_vec: &Vec<PolynomialRing>) -> Vec<PolynomialRing> {
+    poly_matrix
         .iter()
         .map(|row| {
-            row.iter()
-                .zip(s_i.iter())
-                .map(|(a, b)| a * b)
-                .collect::<Vec<PolynomialRing>>()
+            inner_product_polynomial_ring_vector(row, poly_vec)
         })
-        .collect::<Vec<Vec<PolynomialRing>>>()
-        .into_iter()
-        .flatten()
         .collect::<Vec<PolynomialRing>>()
 }
 
@@ -405,7 +399,7 @@ pub fn prove() -> (St, Tr) {
     // calculate t_i = A * s_i for all i = 1..r
     // size of t_i = (kappa * n)R_q * 1R_q = kappa * n
     let t: Vec<Vec<PolynomialRing>> = witness_s.iter().map(|s_i| {
-        let t_i = matrix_times_vector_poly(&a_matrix, s_i);
+        let t_i = matrix_poly_times_poly_vector(&a_matrix.values, s_i);
         println!("size of t_i: {:?}", t_i.len());
         t_i
     }).collect();
@@ -1120,8 +1114,36 @@ mod tests {
                 coefficients: vec![Zq::from(3), Zq::from(4)],
             },
         ];
-        let result = matrix_times_vector_poly(&a, &s_i);
-        assert_eq!(result.len(), a.values.len() * s_i.len()); // Check that the result length is correct
+        // matrix a: [[(2+2x), (2+2x)], [(2+2x), (2+2x)]]
+        // s_i: [(1+2x), (3+4x)]
+        // a * s_i = [
+        //   [(2+2x), (2+2x)] * [(1+2x), (3+4x)],
+        //   [(2+2x), (2+2x)] * [(1+2x), (3+4x)]
+        // ]
+        // = [
+        //   (2+2x) * (1+2x) + (2+2x) * (3+4x),
+        //   (2+2x) * (1+2x) + (2+2x) * (3+4x)
+        // ]
+        // = [
+        //   (2+4x+2x+4x^2) + (6+8x+6x+8x^2),
+        //   (2+4x+2x+4x^2) + (6+8x+6x+8x^2)
+        // ]
+        // = [
+        //   8+20x+12x^2,
+        //   8+20x+12x^2
+        // ]
+        // print a
+        println!("{:?}", a);
+        let result = matrix_poly_times_poly_vector(&a.values, &s_i);
+        let expected = vec![
+            PolynomialRing {
+                coefficients: vec![Zq::from(8), Zq::from(20), Zq::from(12)],
+            },
+            PolynomialRing {
+                coefficients: vec![Zq::from(8), Zq::from(20), Zq::from(12)],
+            },
+        ];
+        assert_eq!(result, expected);
     }
 
     #[test]
