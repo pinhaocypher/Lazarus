@@ -3,6 +3,18 @@ use rand::Rng;
 use crate::setup::setup;
 use crate::algebra::{PolynomialRing, RqMatrix, Zq};
 
+// a: Vec<PolynomialRing>, b: PolynomialRing
+// calculate c = a * b, c_i = a_i * b
+// c: Vec<PolynomialRing>
+fn poly_vec_times_poly(a: &Vec<PolynomialRing>, b: &PolynomialRing) -> Vec<PolynomialRing> {
+    a.iter().map(|a_i| a_i * b).collect()
+}
+// a: Vec<PolynomialRing>, b: Vec<PolynomialRing>
+// calculate c = a + b, c_i = a_i + b_i
+// c: Vec<PolynomialRing>
+fn poly_vec_add_poly_vec(a: &Vec<PolynomialRing>, b: &Vec<PolynomialRing>) -> Vec<PolynomialRing> {
+    a.iter().zip(b.iter()).map(|(a_i, b_i)| a_i + b_i).collect()
+}
 
 // inner product of 2 vectors of PolynomialRing
 fn inner_product_polynomial_ring_vector(
@@ -994,6 +1006,51 @@ mod tests {
         let (st, tr) = prove();
         verify(st, tr);
     }
+
+    #[test]
+    fn test_poly_vec_times_poly() {
+        // Arrange
+        let a = vec![
+            PolynomialRing { coefficients: vec![Zq::from(1), Zq::from(2), Zq::from(3)] },
+            PolynomialRing { coefficients: vec![Zq::from(4), Zq::from(5), Zq::from(6)] },
+        ];
+        let b = PolynomialRing { coefficients: vec![Zq::from(2), Zq::from(3), Zq::from(4)] };
+
+        // Act
+        let result = poly_vec_times_poly(&a, &b);
+        // expected[0] = a[0] * b = (1 + 2x + 3x^2) * (2 + 3x + 4x^2) = 2 + 7x + 16x^2 + 17x^3 + 12x^4
+        // expected[1] = a[1] * b = (4 + 5x + 6x^2) * (2 + 3x + 4x^2) = 8 + 22x + 43x^2 + 38x^3 + 24x^4
+        // Assert
+        let expected = vec![
+            PolynomialRing { coefficients: vec![Zq::from(2), Zq::from(7), Zq::from(16), Zq::from(17), Zq::from(12)] },
+            PolynomialRing { coefficients: vec![Zq::from(8), Zq::from(22), Zq::from(43), Zq::from(38), Zq::from(24)] },
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_poly_vec_add_poly_vec() {
+        // Arrange
+        let a = vec![
+            PolynomialRing { coefficients: vec![Zq::from(1), Zq::from(2), Zq::from(3)] },
+            PolynomialRing { coefficients: vec![Zq::from(4), Zq::from(5), Zq::from(6)] },
+        ];
+        let b = vec![
+            PolynomialRing { coefficients: vec![Zq::from(7), Zq::from(8), Zq::from(9)] },
+            PolynomialRing { coefficients: vec![Zq::from(10), Zq::from(11), Zq::from(12)] },
+        ];
+
+        // Act
+        let result = poly_vec_add_poly_vec(&a, &b);
+
+        // Assert
+        let expected = vec![
+            PolynomialRing { coefficients: vec![Zq::from(8), Zq::from(10), Zq::from(12)] },
+            PolynomialRing { coefficients: vec![Zq::from(14), Zq::from(16), Zq::from(18)] },
+        ];
+        assert_eq!(result, expected);
+    }
+
 
     #[test]
     fn test_multiply_by_polynomial_ring() {
