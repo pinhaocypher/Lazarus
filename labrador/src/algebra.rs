@@ -360,7 +360,7 @@ impl RqMatrix {
         let size_kappa_usize: usize = kappa.value() as usize;
         let size_n_usize: usize = size_n.value() as usize;
         let mut rng = rand::thread_rng();
-        let values = (0..size_kappa_usize)
+        let values: Vec<Vec<PolynomialRing>> = (0..size_kappa_usize)
             .map(|_| {
                 (0..size_n_usize)
                     .map(|_| PolynomialRing {
@@ -371,6 +371,8 @@ impl RqMatrix {
                     .collect()
             })
             .collect();
+        assert_eq!(values.len(), size_kappa_usize, "values must have the same length as size_kappa");
+        assert_eq!(values[0].len(), size_n_usize, "values[0] must have the same length as size_n");
         RqMatrix { values }
     }
 }

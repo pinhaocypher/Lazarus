@@ -21,6 +21,7 @@ fn inner_product_polynomial_ring_vector(
     a: &Vec<PolynomialRing>,
     b: &Vec<PolynomialRing>,
 ) -> PolynomialRing {
+    assert_eq!(a.len(), b.len(), "inner_product_polynomial_ring_vector: a and b must have the same length");
     a.iter()
         .zip(b.iter())
         .map(|(a, b)| a * b)
@@ -41,10 +42,11 @@ fn inner_product_zq_vector(a: &Vec<Zq>, b: &Vec<Zq>) -> Zq {
 // calculate c = sum(c_i), c_i = poly_vec_times_poly(a_i, b_i)
 // c: Vec<PolynomialRing>
 fn inner_product_poly_matrix_and_poly_vector(poly_matrix: &Vec<Vec<PolynomialRing>>, poly_vector: &Vec<PolynomialRing>) -> Vec<PolynomialRing> {
+    assert_eq!(poly_matrix.len(), poly_vector.len(), "inner_product_poly_matrix_and_poly_vector: poly_matrix and poly_vector must have the same length");
     poly_matrix.iter().zip(poly_vector.iter()).map(
         |(poly_matrix_row, poly_vector_element)| poly_vec_times_poly(&poly_matrix_row, &poly_vector_element)
     ).fold(
-        vec![PolynomialRing { coefficients: vec![Zq::from(0); 1] }; poly_matrix.len()],
+        vec![PolynomialRing { coefficients: vec![Zq::from(0); 1] }; poly_matrix[0].len()],
         |acc, x: Vec<PolynomialRing>| poly_vec_add_poly_vec(&acc, &x)
     )
 }
