@@ -46,7 +46,7 @@ fn inner_product_poly_matrix_and_poly_vector(poly_matrix: &Vec<Vec<PolynomialRin
     poly_matrix.iter().zip(poly_vector.iter()).map(
         |(poly_matrix_row, poly_vector_element)| poly_vec_times_poly(&poly_matrix_row, &poly_vector_element)
     ).fold(
-        vec![PolynomialRing { coefficients: vec![Zq::from(0); 1] }; poly_matrix[0].len()],
+        vec![zero_poly(); poly_matrix[0].len()],
         |acc, x: Vec<PolynomialRing>| poly_vec_add_poly_vec(&acc, &x)
     )
 }
@@ -319,7 +319,7 @@ fn verify_inner_product_and_z_computation(witness_s: &Vec<Vec<PolynomialRing>>) 
     let z_z_inner_product = inner_product_polynomial_ring_vector(&z, &z);
     println!("z_z_inner_product: {:?}", z_z_inner_product);
 
-    let mut sum_g_ij_c_i_c_j = PolynomialRing { coefficients: vec![Zq::from(0); 1] };
+    let mut sum_g_ij_c_i_c_j = zero_poly();
     for i in 0..size_r.value() {
         for j in 0..size_r.value() {
             let g_ij = &g[i][j]; // Borrow g[i][j] instead of moving it
@@ -1033,6 +1033,10 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     return (st, tr);
 }
 
+fn zero_poly() -> PolynomialRing {
+    PolynomialRing { coefficients: vec![Zq::from(0); 1] }
+}
+
 fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<Vec<Vec<RqMatrix>>>, d_matrix: &Vec<Vec<Vec<RqMatrix>>>) {
     // same parameters as in the prover
     let size_r = Zq::new(3); // r: Number of witness elements
@@ -1129,7 +1133,7 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
     let z_z_inner_product = inner_product_polynomial_ring_vector(&z, &z);
     println!("z_z_inner_product: {:?}", z_z_inner_product);
 
-    let mut sum_g_ij_c_i_c_j = PolynomialRing { coefficients: vec![Zq::from(0); 1] };
+    let mut sum_g_ij_c_i_c_j = zero_poly();
     for i in 0..size_r.value() {
         for j in 0..size_r.value() {
             let g_ij = &g[i][j]; // Borrow g[i][j] instead of moving it
@@ -1226,7 +1230,7 @@ mod tests {
         let z_z_inner_product = inner_product_polynomial_ring_vector(&z, &z);
         println!("z_z_inner_product: {:?}", z_z_inner_product);
 
-        let mut sum_g_ij_c_i_c_j = PolynomialRing { coefficients: vec![Zq::from(0); 1] };
+        let mut sum_g_ij_c_i_c_j = zero_poly();
         for i in 0..size_r.value() {
             for j in 0..size_r.value() {
                 let g_ij = &g[i][j]; // Borrow g[i][j] instead of moving it
