@@ -45,7 +45,7 @@
 			- $1 \le i \le j \le r$
 			- $0 \le k \le t_2 - 1$
 			- $t_2$ see below decomposition section
-			- $\kappa_2??
+			- $\kappa_2$ ??
 		- $D_{ijk} \in R_q^{\kappa_2 \times 1}$
 			- $1 \le i \le j \le r$
 			- $0 \le k \le t_1 - 1$
