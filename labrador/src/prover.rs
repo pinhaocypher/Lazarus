@@ -1206,7 +1206,7 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
 
     // 6.1 caculate b^{''(k)}
     // 6.1.1 calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
-    let a_constraint_ct_aggr = compute_aggr_ct_constraint_a(
+    let a_ct_aggr = compute_aggr_ct_constraint_a(
         &a_constraint_ct,
         &psi,
         size_k,
@@ -1214,10 +1214,10 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
         constraint_num_l,
         deg_bound_d,
     );
-    println!("a_constraint_ct_aggr: {:?}", a_constraint_ct_aggr);
-    assert_eq!(a_constraint_ct_aggr.len(), size_k.value());
-    assert_eq!(a_constraint_ct_aggr[0].len(), size_r.value());
-    assert_eq!(a_constraint_ct_aggr[0][0].len(), size_r.value());
+    println!("a_ct_aggr: {:?}", a_ct_aggr);
+    assert_eq!(a_ct_aggr.len(), size_k.value());
+    assert_eq!(a_ct_aggr[0].len(), size_r.value());
+    assert_eq!(a_ct_aggr[0][0].len(), size_r.value());
     // 6.1.2 calculate phi_i^{''(k)} =
     //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
     //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
@@ -1241,7 +1241,7 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
     println!("b_ct_aggr: {:?}", b_ct_aggr);
     assert_eq!(b_ct_aggr.len(), size_k.value());
 
-    let a_aggr = compute_aggr_constraint_a(&a_constraint, &a_constraint_ct_aggr, constraint_num_k, &alpha, &beta, size_r, size_k);
+    let a_aggr = compute_aggr_constraint_a(&a_constraint, &a_ct_aggr, constraint_num_k, &alpha, &beta, size_r, size_k);
     println!("a_aggr: {:?}", a_aggr);
     assert_eq!(a_aggr.len(), size_r.value());
     assert_eq!(a_aggr[0].len(), size_r.value());
