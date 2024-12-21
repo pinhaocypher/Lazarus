@@ -521,6 +521,9 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     let log_q = Zq::new(32);
     let deg_bound_d = Zq::new(8); // random polynomial degree bound
     let beta = Zq::new(70); // Example value for beta
+    let mut rng = rand::thread_rng();
+    let constraint_num_k = Zq::new(2);
+    let constraint_num_l = Zq::new(2); // Define L
 
     let witness_s: Vec<Vec<PolynomialRing>> = (0..size_r.value())
         .map(|_| {
@@ -539,8 +542,6 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
         "The condition is not satisfied: sum of squared norms exceeds beta^2"
     );
 
-    let mut rng = rand::thread_rng();
-    let constraint_num_k = Zq::new(6);
     // In DPCS (dot product constraint system), there are k constraints, each constraint has a, phi, and b
     // Generate random a^(k)_{i,j}: k length vector of matrices, each matrix is r x r, and each element is a Zq
     // TODO: Ensure a_ij == a_ji
@@ -575,7 +576,6 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     // In DPCS(dot product constraint system) for constant terms(ct), there are k constraints, each constraint has a, phi and b.
     // Generate random a^(l)_{i,j}: l length vector of matrix, matrix length is r x r, each element is a Zq
     // todo: aij == aji, refer to paper page 10
-    let constraint_num_l = Zq::new(5); // Define L
     let a_constraint_ct: Vec<Vec<Vec<PolynomialRing>>> = (0..constraint_num_l.value())
         .map(|_| {
             (0..size_r.value())
@@ -661,9 +661,6 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     );
 
     // 2.2.1 get basis b2 same as 2.1.1
-    // Calculate g_ij = <s_i, s_j>
-    let num_s = Zq::new(witness_s.len());
-
     // Calculate garbage polynomial g_ij = <s_i, s_j>
     let g: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
         (0..size_r.value()).map(|j| {
@@ -930,7 +927,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     let alpha: Vec<PolynomialRing> = (0..constraint_num_k.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
     let beta: Vec<PolynomialRing> = (0..size_k.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
     // 5.2 phi_i = sum(alpha_k * phi_i) + beta_k * phi_i^{''(k)}
-    let phi_aggr = compute_aggr_constraint_phi(
+    let phi_aggr: Vec<Vec<PolynomialRing>> = compute_aggr_constraint_phi(
         &phi_constraint,
         &phi_ct_aggr,
         constraint_num_k,
