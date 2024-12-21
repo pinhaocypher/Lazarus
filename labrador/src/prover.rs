@@ -545,7 +545,8 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
 
     // In DPCS (dot product constraint system), there are k constraints, each constraint has a, phi, and b
     // Generate random a^(k)_{i,j}: k length vector of matrices, each matrix is r x r, and each element is a Zq
-    // TODO: Ensure a_ij == a_ji
+    // TODO: a_ij == a_ji, and aij = 0 for |i − j| > 1. Furthermore, a^(k)_{ij} = 0 unless i,j ≤ 2ν.
+    // refer to paper page 15
     let a_constraint: Vec<Vec<Vec<PolynomialRing>>> = (0..constraint_num_k.value())
         .map(|_| {
             (0..size_r.value())
