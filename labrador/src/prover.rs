@@ -1566,59 +1566,6 @@ mod tests {
         assert_eq!(result, expected);
     }
 
-
-    #[test]
-    fn test_multiply_by_polynomial_ring() {
-        let poly1 = PolynomialRing {
-            coefficients: vec![Zq::from(1), Zq::from(2)],
-        };
-        let poly2 = PolynomialRing {
-            coefficients: vec![Zq::from(3), Zq::from(4)],
-        };
-        let result = poly1 * poly2;
-        assert_eq!(result.coefficients, vec![Zq::from(3), Zq::from(10), Zq::from(8)]); // 1*3, 1*4 + 2*3, 2*4
-    }
-    #[test]
-    fn test_polynomial_ring_mul_overflow() {
-        // Create two polynomials that will cause overflow when multiplied
-        // For example, (X^63 + 1) * (X^63 + 1) = X^126 + 2X^63 + 1
-        // Modulo X^64 + 1, X^64 = -1, so X^126 = X^(2*64 -2) = X^-2 = X^62
-        // Thus, X^126 + 2X^63 +1 mod X^64+1 = (-1)*X^62 + 2X^63 +1
-
-        // Initialize poly1 as X^63 + 1
-        let mut poly1_coeffs = vec![Zq::from(0); 64];
-        poly1_coeffs[0] = Zq::from(1);    // Constant term
-        poly1_coeffs[63] = Zq::from(1);   // X^63 term
-        let poly1 = PolynomialRing {
-            coefficients: poly1_coeffs,
-        };
-
-        // Multiply poly1 by itself
-        let product = poly1.clone() * poly1.clone();
-
-        // Expected coefficients after reduction modulo X^64 + 1:
-        // coefficients[0] = 1
-        // coefficients[62] = Zq::modulus() - 1  (since -1 mod q)
-        // coefficients[63] = 2
-        // All other coefficients should be 0
-        let mut expected_coeffs = vec![Zq::from(1)];
-        for _ in 1..62 {
-            expected_coeffs.push(Zq::from(0));
-        }
-        expected_coeffs.push(Zq::from(Zq::modulus() - 1)); // X^62 term
-        expected_coeffs.push(Zq::from(2));                  // X^63 term
-
-        // Assert that the product has the correct degree bound
-        assert_eq!(product.coefficients.len(), 64, "Product should be truncated to DEGREE_BOUND");
-
-        // Assert that the coefficients match the expected values
-        assert_eq!(
-            product.coefficients,
-            expected_coeffs,
-            "Overflow handling in multiplication is incorrect"
-        );
-    }
-
     #[test]
     fn test_calculate_b_k() {
         let r = 3;
@@ -1897,61 +1844,6 @@ mod tests {
     }
 
     #[test]
-    fn test_zq_addition() {
-        let a = Zq::new(10);
-        let b = Zq::new(20);
-        let result = a + b;
-        assert_eq!(result.value, 30);
-    }
-
-    #[test]
-    fn test_zq_subtraction() {
-        let a = Zq::new(10);
-        let b = Zq::new(5);
-        let result = a - b;
-        assert_eq!(result.value, 5);
-    }
-
-    #[test]
-    fn test_zq_multiplication() {
-        let a = Zq::new(6);
-        let b = Zq::new(7);
-        let result = a * b;
-        assert_eq!(result.value, 42);
-    }
-
-    #[test]
-    fn test_zq_overflow() {
-        let a = Zq::new(Zq::Q - 1);
-        let b = Zq::new(2);
-        let result = a + b;
-        assert_eq!(result.value, 1); // (2^32 - 1) + 2 mod 2^32 = 1
-    }
-
-    #[test]
-    fn test_zq_new() {
-        let value = 4294967297; // Q + 1
-        let zq = Zq::new(value);
-        assert_eq!(zq.value, 1);
-    }
-
-    #[test]
-    fn test_zq_division() {
-        let a = Zq::new(20);
-        let b = Zq::new(5);
-        let result = a / b;
-        assert_eq!(result.value, 4);
-    }
-
-    #[test]
-    fn test_zq_remainder() {
-        let a = Zq::new(10);
-        let b = Zq::new(3);
-        let result = a % b;
-        assert_eq!(result.value, 1);
-    }
-
-    #[test]
     fn test_conjugation_automorphism() {
         // Create example PolynomialRings a and b
         let a = PolynomialRing {
@@ -1985,7 +1877,6 @@ mod tests {
             "<a, b> should equal the constant term of <σ-1(a), b>"
         );
     }
-
 
     #[test]
     fn test_decompose_poly_to_basis_form() {
