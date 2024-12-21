@@ -841,7 +841,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     // k = 1..λ/log2^q
     let size_k = lambda / log_q;
     let psi: Vec<Vec<Zq>> = (0..size_k.value())
-        .map(|_| (0..constraint_num_l.value()).map(|_| Zq::new(rng.gen_range(0..10))).collect())
+        .map(|_| (0..constraint_num_l.value()).map(|_| Zq::new(rng.gen_range(1..10))).collect())
         .collect();
     assert_eq!(psi.len(), size_k.value());
     assert_eq!(psi[0].len(), constraint_num_l.value());
@@ -849,7 +849,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     // 4.2 omega^(k) is randomly chosen from Z_q^{256}
     //      (Both using Guassian Distribution)
     let omega: Vec<Vec<Zq>> = (0..size_k.value())
-        .map(|_| (0..double_lambda.value()).map(|_| Zq::new(rng.gen_range(0..10))).collect())
+        .map(|_| (0..double_lambda.value()).map(|_| Zq::new(rng.gen_range(1..10))).collect())
         .collect();
     assert_eq!(omega.len(), size_k.value());
     assert_eq!(omega[0].len(), double_lambda.value());
