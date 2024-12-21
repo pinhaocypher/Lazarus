@@ -461,12 +461,13 @@ mod tests {
         let result = poly1 * poly2;
         assert_eq!(result.coefficients, vec![Zq::from(3), Zq::from(10), Zq::from(8)]); // 1*3, 1*4 + 2*3, 2*4
     }
+
     #[test]
     fn test_polynomial_ring_mul_overflow() {
         // Create two polynomials that will cause overflow when multiplied
-        // For example, (X^63 + 1) * (X^63 + 1) = X^126 + 2X^63 + 1
-        // Modulo X^64 + 1, X^64 = -1, so X^126 = X^(2*64 -2) = X^-2 = X^62
-        // Thus, X^126 + 2X^63 +1 mod X^64+1 = (-1)*X^62 + 2X^63 +1
+        // For example, (X^63 + 1) * (X^63 + x) = X^126 + X^64 + X^63 + X
+        // Modulo X^64 + 1, X^64 = -1, so X^126 = X^(2*64 -2) = X^-2 = X^62, X*X^63 = -1
+        // Thus, X^126 + X^64 + X^63 + X mod X^64+1 = (-1)*X^62 + (-1) + X + X^63 = - 1 + X - X^62 + X^63
 
         // Initialize poly1 as X^63 + 1
         let mut poly1_coeffs = vec![Zq::from(0); 64];
@@ -476,20 +477,27 @@ mod tests {
             coefficients: poly1_coeffs,
         };
 
-        // Multiply poly1 by itself
-        let product = poly1.clone() * poly1.clone();
+        // Initialize poly1 as X^63 + X
+        let mut poly2_coeffs = vec![Zq::from(0); 64];
+        poly2_coeffs[1] = Zq::from(1);   // X term
+        poly2_coeffs[63] = Zq::from(1);   // X^63 term
+        let poly2 = PolynomialRing {
+            coefficients: poly2_coeffs,
+        };
+
+        // Multiply poly1 by poly2
+        let product = poly1.clone() * poly2.clone();
 
         // Expected coefficients after reduction modulo X^64 + 1:
         // coefficients[0] = 1
         // coefficients[62] = Zq::modulus() - 1  (since -1 mod q)
         // coefficients[63] = 2
         // All other coefficients should be 0
-        let mut expected_coeffs = vec![Zq::from(1)];
-        for _ in 1..62 {
-            expected_coeffs.push(Zq::from(0));
-        }
-        expected_coeffs.push(Zq::from(Zq::modulus() - 1)); // X^62 term
-        expected_coeffs.push(Zq::from(2));                  // X^63 term
+        let mut expected_coeffs = vec![Zq::from(0); 64];
+        expected_coeffs[0] = Zq::from(Zq::modulus() - 1);    // Constant term
+        expected_coeffs[1] = Zq::from(1);                    // X term
+        expected_coeffs[62] = Zq::from(Zq::modulus() - 1);   // X^62 term
+        expected_coeffs[63] = Zq::from(1);                   // X^63 term
 
         // Assert that the product has the correct degree bound
         assert_eq!(product.coefficients.len(), 64, "Product should be truncated to DEGREE_BOUND");
