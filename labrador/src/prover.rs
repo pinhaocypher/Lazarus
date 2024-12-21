@@ -184,7 +184,8 @@ fn conjugation_automorphism(poly: &PolynomialRing) -> PolynomialRing {
 fn generate_random_polynomial_ring(deg_bound_d: usize) -> PolynomialRing {
     let mut rng = rand::thread_rng();
     PolynomialRing {
-        coefficients: (0..deg_bound_d).map(|_| Zq::from(rng.gen_range(0..10))).collect(),
+        // todo: since h_ij calculation includes 1/2, we need to make sure the coefficients are divisible by 2. any other way???
+        coefficients: (0..deg_bound_d).map(|_| Zq::from(rng.gen_range(1..5) * 2)).collect(),
     }
 }
 
@@ -949,6 +950,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
             let phi_j = &phi_aggr[j];
             let s_i = &witness_s[i];
             let s_j = &witness_s[j];
+            // todo: what if inner_product_ij is not divisible by 2???
             let inner_product_ij = inner_product_polynomial_ring_vector(&phi_i, &s_j) + inner_product_polynomial_ring_vector(&phi_j, &s_i);
             inner_product_ij / Zq::from(2)
         }).collect::<Vec<PolynomialRing>>()
