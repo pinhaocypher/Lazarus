@@ -10,7 +10,7 @@ use std::ops::AddAssign;
 use std::cmp::PartialEq;
 use rand::Rng;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq)]
 pub struct PolynomialRing {
     pub coefficients: Vec<Zq>,
 }
@@ -139,7 +139,10 @@ impl Div<Zq> for PolynomialRing {
         let new_coefficients = self
             .coefficients
             .iter()
-            .map(|c| Zq::new(c.value() / other.value()))
+            .map(|c| {
+                assert_eq!(c.value() % other.value(), 0, "Division should be divisible by other");
+                Zq::new(c.value() / other.value())
+            })
             .collect();
         PolynomialRing {
             coefficients: new_coefficients,
@@ -310,6 +313,7 @@ impl Add for Zq {
     type Output = Zq;
 
     fn add(self, other: Zq) -> Zq {
+        // assert!(self.value + other.value < Self::Q, "Addition result exceeds modulus");
         Zq::new(self.value + other.value)
     }
 }
@@ -333,6 +337,7 @@ impl Mul for Zq {
     type Output = Zq;
 
     fn mul(self, other: Zq) -> Zq {
+        // assert!(self.value * other.value < Self::Q, "Multiplication result exceeds modulus");
         Zq::new(self.value * other.value)
     }
 }
