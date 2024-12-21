@@ -504,6 +504,35 @@ fn compute_aggr_constraint_b(
     part1 + part2
 }
 
+fn check_aggr_relation(a_aggr: &Vec<Vec<PolynomialRing>>, b_aggr: PolynomialRing, g: &Vec<Vec<PolynomialRing>>, h: &Vec<Vec<PolynomialRing>>) {
+    let size_r = Zq::from(a_aggr.len());
+    // 7. check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
+    // 7.1 calculate sum(a_ij * g_ij)
+    let sum_a_ij_g_ij = a_aggr.iter().zip(g.iter()).map(|(a_i, g_i)| {
+        a_i.iter().zip(g_i.iter()).map(|(a_ij, g_ij)| a_ij * g_ij).fold(zero_poly(), |acc, val| acc + val)
+    }).fold(zero_poly(), |acc, val| acc + val);
+    println!("sum_a_ij_g_ij: {:?}", sum_a_ij_g_ij);
+    let mut sum_a_ij_g_ij2 = zero_poly();
+    for i in 0..size_r.value() {
+        for j in 0..size_r.value() {
+            sum_a_ij_g_ij2 = sum_a_ij_g_ij2 + (&a_aggr[i][j] * &g[i][j]);
+        }
+    }
+    println!("sum_a_ij_g_ij2: {:?}", sum_a_ij_g_ij2);
+    assert_eq!(sum_a_ij_g_ij, sum_a_ij_g_ij2);
+
+    // 7.2 calculate sum(h_ii)
+    let sum_h_ii = (0..size_r.value()).fold(zero_poly(), |acc, i| acc + &h[i][i]);
+    println!("sum_h_ii: {:?}", sum_h_ii);
+    let mut sum_h_ii2 = zero_poly();
+    for i in 0..size_r.value() {
+        sum_h_ii2 = sum_h_ii2 + &h[i][i];
+    }
+    println!("sum_h_ii2: {:?}", sum_h_ii2);
+    assert_eq!(sum_h_ii, sum_h_ii2);
+    // 7.3 check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
+    assert_eq!(sum_a_ij_g_ij + sum_h_ii, b_aggr);
+}
 
 #[time_profiler()]
 pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<Vec<Vec<RqMatrix>>>, d_matrix: &Vec<Vec<Vec<RqMatrix>>>) -> (St, Tr) {
@@ -1376,6 +1405,62 @@ mod tests {
         println!("sum_h_ij_c_i_c_j: {:?}", sum_h_ij_c_i_c_j);
 
         assert_eq!(sum_phi_i_z_c_i, sum_h_ij_c_i_c_j);
+    }
+
+    #[test]
+    fn test_aggr_relation() {
+        let size_r = Zq::new(3); // r: Number of witness elements
+        let size_n = Zq::new(5); // n
+        let deg_bound_d = Zq::new(8); // random polynomial degree bound
+        // generate size_r * size_n witness_s
+        let witness_s: Vec<Vec<PolynomialRing>> = (0..size_r.value())
+            .map(|_| {
+                (0..size_n.value())
+                    .map(|_| generate_random_polynomial_ring(deg_bound_d.value()) * Zq::from(2))
+                    .collect()
+            })
+            .collect();
+
+        // generate size_r * size_r a_aggr
+        let a_aggr: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
+            (0..size_r.value()).map(|j| {
+                generate_random_polynomial_ring(deg_bound_d.value())
+            }).collect::<Vec<PolynomialRing>>()
+        }).collect();
+
+        // generate size_r * size_n phi_aggr
+        let phi_aggr: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
+            (0..size_n.value()).map(|j| {
+                generate_random_polynomial_ring(deg_bound_d.value())
+            }).collect::<Vec<PolynomialRing>>()
+        }).collect();
+
+        let b_aggr: PolynomialRing = calculate_b_constraint(&witness_s, &a_aggr, &phi_aggr);
+        println!("b_aggr: {:?}", b_aggr);
+
+        // Calculate garbage polynomial g_ij = <s_i, s_j>
+        let g: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
+            (0..size_r.value()).map(|j| {
+                let s_i = &witness_s[i];
+                let s_j = &witness_s[j];
+                inner_product_polynomial_ring_vector(&s_i, &s_j)
+            }).collect::<Vec<PolynomialRing>>()
+        }).collect();
+        println!("g_gar_poly: {:?}", g);
+
+        let h: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
+            (0..size_r.value()).map(|j| {
+                let phi_i = &phi_aggr[i];
+                let phi_j = &phi_aggr[j];
+                let s_i = &witness_s[i];
+                let s_j = &witness_s[j];
+                // todo: what if inner_product_ij is not divisible by 2???
+                let inner_product_ij = inner_product_polynomial_ring_vector(&phi_i, &s_j) + inner_product_polynomial_ring_vector(&phi_j, &s_i);
+                inner_product_ij / Zq::from(2)
+            }).collect::<Vec<PolynomialRing>>()
+        }).collect();
+
+        check_aggr_relation(&a_aggr, b_aggr, &g, &h);
     }
 
     #[test]
