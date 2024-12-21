@@ -514,25 +514,10 @@ fn check_aggr_relation(a_aggr: &Vec<Vec<PolynomialRing>>, b_aggr: PolynomialRing
     let sum_a_ij_g_ij = a_aggr.iter().zip(g.iter()).map(|(a_i, g_i)| {
         a_i.iter().zip(g_i.iter()).map(|(a_ij, g_ij)| a_ij * g_ij).fold(zero_poly(), |acc, val| acc + val)
     }).fold(zero_poly(), |acc, val| acc + val);
-    println!("sum_a_ij_g_ij: {:?}", sum_a_ij_g_ij);
-    let mut sum_a_ij_g_ij2 = zero_poly();
-    for i in 0..size_r.value() {
-        for j in 0..size_r.value() {
-            sum_a_ij_g_ij2 = sum_a_ij_g_ij2 + (&a_aggr[i][j] * &g[i][j]);
-        }
-    }
-    println!("sum_a_ij_g_ij2: {:?}", sum_a_ij_g_ij2);
-    assert_eq!(sum_a_ij_g_ij, sum_a_ij_g_ij2);
 
     // 7.2 calculate sum(h_ii)
     let sum_h_ii = (0..size_r.value()).fold(zero_poly(), |acc, i| acc + &h[i][i]);
-    println!("sum_h_ii: {:?}", sum_h_ii);
-    let mut sum_h_ii2 = zero_poly();
-    for i in 0..size_r.value() {
-        sum_h_ii2 = sum_h_ii2 + &h[i][i];
-    }
-    println!("sum_h_ii2: {:?}", sum_h_ii2);
-    assert_eq!(sum_h_ii, sum_h_ii2);
+
     // 7.3 check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
     assert_eq!(sum_a_ij_g_ij + sum_h_ii, b_aggr);
 }
@@ -557,7 +542,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     let mut rng = rand::thread_rng();
     let constraint_num_k = Zq::new(2);
     let constraint_num_l = Zq::new(2); // Define L
-
+    println!("Prover: Generate random witness");
     let witness_s: Vec<Vec<PolynomialRing>> = (0..size_r.value())
         .map(|_| {
             (0..size_n.value())
@@ -565,16 +550,15 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
                 .collect()
         })
         .collect();
-    println!("s: {:?}", witness_s);
     let sum_squared_norms = poly_matrix_norm_squared(&witness_s);
-    println!("sum_squared_norms: {}", sum_squared_norms.value());
-    println!("beta^2: {}", beta.pow(2));
+    println!("Prover: Check witness norm is in range");
     // Check the condition
     assert!(
         sum_squared_norms <= beta.pow(2),
         "The condition is not satisfied: sum of squared norms exceeds beta^2"
     );
 
+    println!("Prover: Generate random DPCS (dot product constraint system) constraints");
     // In DPCS (dot product constraint system), there are k constraints, each constraint has a, phi, and b
     // Generate random a^(k)_{i,j}: k length vector of matrices, each matrix is r x r, and each element is a Zq
     // TODO: a_ij == a_ji, and aij = 0 for |i − j| > 1. Furthermore, a^(k)_{ij} = 0 unless i,j ≤ 2ν.
@@ -605,7 +589,6 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     let b_constraint: Vec<PolynomialRing> = (0..constraint_num_k.value())
         .map(|k| calculate_b_constraint(&witness_s, &a_constraint[k], &phi_constraint[k]))
         .collect();
-    println!("b_constraint: {:?}", b_constraint);
 
     // In DPCS(dot product constraint system) for constant terms(ct), there are k constraints, each constraint has a, phi and b.
     // Generate random a^(l)_{i,j}: l length vector of matrix, matrix length is r x r, each element is a Zq
@@ -621,7 +604,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
                 .collect()
         })
         .collect();
-    println!("a_constraint_ct: {:?}", a_constraint_ct);
+
     // Generate random phi^(k)_{i}: k length vector of matrix, matrix length is r x n, each element in matrix is a Zq
     let phi_constraint_ct: Vec<Vec<Vec<PolynomialRing>>> = (0..constraint_num_l.value())
         .map(|_| {
@@ -634,7 +617,6 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
                 .collect()
         })
         .collect();
-    println!("phi_constraint: {:?}", phi_constraint_ct);
     assert_eq!(phi_constraint_ct.len(), constraint_num_l.value());
     assert_eq!(phi_constraint_ct[0].len(), size_r.value());
     assert_eq!(phi_constraint_ct[0][0].len(), size_n.value());
@@ -647,21 +629,14 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     let b_constraint_ct: Vec<Zq> = (0..constraint_num_l.value()).map(|l| {
         b_constraint_poly[l].coefficients[0]
     }).collect();
-    println!("b_constraint_ct: {:?}", b_constraint_ct);
 
-    // let size_n = 5;
+    println!("Prover: Do Ajtai commitment");
     // A: matrix size: kappa * n, each element is PolynomialRing(R_q)
     // calculate t_i = A * s_i for all i = 1..r
     // size of t_i = (kappa * n)R_q * 1R_q = kappa * n
     let t: Vec<Vec<PolynomialRing>> = witness_s.iter().map(|s_i| {
-        let t_i = matrix_poly_times_poly_vector(&a_matrix.values, s_i);
-        println!("size of t_i: {:?}", t_i.len());
-        t_i
+        matrix_poly_times_poly_vector(&a_matrix.values, s_i)
     }).collect();
-    println!("Calculated all t_i: {:?}", t);
-    // print size of all_t_i
-    println!("size of all_t_i: {:?}", t.len());
-    // check size of all_t_i is kappa
     assert!(t.len() == kappa.value());
 
     // ================================================
@@ -687,12 +662,9 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
         // [[4, 2, 0], [0, 4, 0], [0, 0, 1], [5, 8, 0], [1, 2, 1], [7, 5, 0], [6, 5, 0]]
         // [[4, 1, 0], [7, 3, 0], [1, 9, 0], [8, 1, 1], [9, 5, 1], [9, 0, 1], [2, 7, 0]]
     // ]
+    println!("Prover: Do decomposition");
 
     let all_t_i_basis_form_aggregated = poly_matrix_decompose_and_aggregate(&t, basis, digits);
-    println!(
-        "all_t_i_basis_form_aggregated: {:?}",
-        all_t_i_basis_form_aggregated
-    );
 
     // 2.2.1 get basis b2 same as 2.1.1
     // Calculate garbage polynomial g_ij = <s_i, s_j>
@@ -703,7 +675,6 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
             inner_product_polynomial_ring_vector(&s_i, &s_j)
         }).collect::<Vec<PolynomialRing>>()
     }).collect();
-    println!("g_gar_poly: {:?}", g);
     assert_eq!(g.len(), size_r.value());
     assert_eq!(g[0].len(), size_r.value());
     for i in 0..size_r.value() {
@@ -719,7 +690,6 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     }
 
     let g_matrix_aggregated = poly_matrix_decompose_and_aggregate(&g, basis, t2);
-    println!("g_matrix_aggregated: {:?}", g_matrix_aggregated);
 
     // 2.3 calculate u1
     // 2.3.1 B & C is randomly chosen similar to A
@@ -728,6 +698,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     // B_ik * t_i^(k): Rq^{kappa1}
     // First summation: ∑ B_ik * t_i^(k), 1 ≤ i ≤ r, 0 ≤ k ≤ t1−1
     // Initialize u1 with zeros with size kappa1, each element is a polynomial ring
+    println!("Prover: Send proof u1");
     let mut u1 = vec![
         PolynomialRing {
             coefficients: vec![Zq::from(0); size_n.value()]
@@ -761,14 +732,12 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
                 .collect();
         }
     }
-    println!("u1: {:?}", u1);
 
     // Second summation: ∑ C_ijk * g_ij^(k)
     // Calculate u1 using the pre-generated c_matrix
     for i in 0..size_r.value() {
         for j in i..size_r.value() {
             for k in 0..t2.value() {
-                println!("i: {}, j: {}, k: {}", i, j, k);
                 let c_i_j_k = &c_matrix[i][j][k];
                 let g_i_j = &g_matrix_aggregated[i][j];
                 let c_i_j_k_times_g_i_j = c_i_j_k.values
@@ -793,11 +762,11 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
             }
         }
     }
-    println!("u1: {:?}", u1);
 
 
     // ================================================
 
+    println!("Prover: Do JL projection");
     // 3. GOAL: JL projection
     let nd = size_n * deg_bound_d;
     // generate gaussian distribution matrices
@@ -806,7 +775,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     let pai = (0..size_r.value())
         .map(|_| generate_gaussian_distribution(nd))
         .collect::<Vec<Vec<Vec<Zq>>>>();
-    println!("gaussian_distribution_matrices: {:?}", pai);
+
     assert_eq!(pai.len(), size_r.value());
     assert_eq!(pai[0].len(), double_lambda.value());
     assert_eq!(pai[0][0].len(), nd.value());
@@ -832,7 +801,6 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
         .collect();
     assert_eq!(s_coeffs.len(), size_r.value());
     assert_eq!(s_coeffs[0].len(), nd.value());
-    println!("s_coeffs: {:?}", s_coeffs);
     // implement p calculation, inner product of gaussian_distribution_matrices and s_coeffs
     let mut p: Vec<Zq> = Vec::with_capacity(double_lambda.value());
     for j in 0..double_lambda.value() {
@@ -845,7 +813,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
         }
         p.push(sum);
     }
-    println!("p: {:?}", p);
+
     assert_eq!(p.len(), double_lambda.value());
 
     // sanity check: verify p_j = ct(sum(<σ−1(pi_i^(j)), s_i>)) for all i = 1..r
@@ -859,9 +827,9 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
             let s_i_poly = PolynomialRing { coefficients: s_i.clone() };
             sum = sum + &pai_poly_ca * s_i_poly;
         }
-        println!("sum: {:?}", sum);
         assert_eq!(sum.coefficients[0], p[j]);
     }
+    println!("Prover: Send proof p");
 
 
     // todo: send p to verifier(put in transcript)
@@ -870,6 +838,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
 
     // ================================================
 
+    println!("Prover: Do aggregation");
     // 4. GOAL: Aggregation
     // 4.1 psi^(k) is randomly chosen from Z_q^{L}
     // k = 1..λ/log2^q
@@ -898,7 +867,6 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
         constraint_num_l,
         deg_bound_d,
     );
-    println!("a_constraint_ct_aggr: {:?}", a_constraint_ct_aggr);
     assert_eq!(a_constraint_ct_aggr.len(), size_k.value());
     assert_eq!(a_constraint_ct_aggr[0].len(), size_r.value());
     assert_eq!(a_constraint_ct_aggr[0][0].len(), size_r.value());
@@ -917,7 +885,6 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
         &psi,
         &omega
     );
-    println!("phi_ct_aggr: {:?}", phi_ct_aggr);
     assert_eq!(phi_ct_aggr.len(), size_k.value());
     assert_eq!(phi_ct_aggr[0].len(), size_r.value());
 
@@ -930,7 +897,6 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
         deg_bound_d,
         &witness_s,
     );
-    println!("b_ct_aggr: {:?}", b_ct_aggr);
     assert_eq!(b_ct_aggr.len(), size_k.value());
 
     // todo: send b^{''(k)} to verifier
@@ -949,13 +915,13 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
         let inner_product_omega_k_p = inner_product_zq_vector(&omega_k, &p);
         // add them together
         b_k_0_computed += inner_product_omega_k_p;
-        // print k
-        println!("k: {}", k);
         assert_eq!(b_k_0_from_poly, b_k_0_computed);
+        // todo: bring back this assert
     }
 
     // ================================================
 
+    println!("Prover: Aggregate linear constraints");
     // 5. GOAL: Calculate u2 (2nd outer commitment)
     // 5.1 vec<alpha> and vec<beta> are randomly chosen from R_q^{K} and R_q^{128/logQ}
     let alpha: Vec<PolynomialRing> = (0..constraint_num_k.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
@@ -972,7 +938,6 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
         deg_bound_d,
         size_k,
     );
-    println!("phi_aggr: {:?}", phi_aggr);
     assert_eq!(phi_aggr.len(), size_r.value());
     assert_eq!(phi_aggr[0].len(), size_n.value());
 
@@ -1003,10 +968,6 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     }
 
     let h_gar_poly_basis_form_aggregated = poly_matrix_decompose_and_aggregate(&h, basis, digits);
-    println!(
-        "h_gar_poly_basis_form_aggregated: {:?}",
-        h_gar_poly_basis_form_aggregated
-    );
 
     // 5.4 u2 = sum D_ij * h_ij^(k) for all k = 1..(t1-1)
     let u2 = (0..size_r.value())
@@ -1023,7 +984,6 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
                 kappa2.value()
             ],
             |acc, (i, j, k)| {
-                println!("i: {}, j: {}, k: {}", i, j, k);
                 let d_i_j_k = &d_matrix[i][j][k];
                 let h_i_j = &h_gar_poly_basis_form_aggregated[i][j];
                 let d_i_j_k_times_h_i_j = d_i_j_k.values
@@ -1047,20 +1007,20 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
             },
         );
 
-    println!("u2: {:?}", u2);
+    println!("Prover: Send proof u2");
 
     // Send u2 to verifier
     // transcript.add(u2)
 
     // ================================================
 
+    println!("Prover: Amortize proof");
     // 6. GOAL: calculate z (Amortized Opening)
     // 6.1 c_i is randomly chosen from C, i = 1..r
     // todo: get c from challenge space, refer to paper page 6
     let c: Vec<PolynomialRing> = (0..size_r.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
     // 6.2 calculate z = sum(c_i * s_i) for all i = 1..r
     let z: Vec<PolynomialRing> = inner_product_poly_matrix_and_poly_vector(&witness_s, &c);
-    println!("z: {:?}", z);
     // Send z, t_i, g_ij, h_ij to verifier
     // transcript.add(z);
     // return transcript;
@@ -1073,7 +1033,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
         zero_poly(),
         |acc, val| acc + val,
     );
-    println!("sum_phi_i_z_c_i: {:?}", sum_phi_i_z_c_i);
+
     // calculate sum(h_ij * c_i * c_j)
     let mut sum_h_ij_c_i_c_j = zero_poly();
     for i in 0..size_r.value() {
@@ -1084,10 +1044,10 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
             sum_h_ij_c_i_c_j = sum_h_ij_c_i_c_j + (h_ij * c_i * c_j);
         }
     }
-    println!("sum_h_ij_c_i_c_j: {:?}", sum_h_ij_c_i_c_j);
 
     assert_eq!(sum_phi_i_z_c_i, sum_h_ij_c_i_c_j);
-
+    println!("Prover: Send amortized proof");
+    println!("Prover is finished");
     // Send u2 to verifier
     // transcript.add(u2)
     let st = St {
@@ -1175,43 +1135,26 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
     // 3. check if norm sum of z, t, g, h <= beta'^2
     // 3.1 decompose z, t, g, h to basis form
     let z_basis_form = poly_vec_decompose_and_aggregate(&z, basis, digits);
-    println!("z_basis_form: {:?}", z_basis_form);
     let all_t_i_basis_form_aggregated = poly_matrix_decompose_and_aggregate(&t, basis, digits);
-    println!(
-        "all_t_i_basis_form_aggregated: {:?}",
-        all_t_i_basis_form_aggregated
-    );
     let g_matrix_aggregated = poly_matrix_decompose_and_aggregate(&g, basis, t2);
-    println!("g_matrix_aggregated: {:?}", g_matrix_aggregated);
-
     let h_gar_poly_basis_form_aggregated = poly_matrix_decompose_and_aggregate(&h, basis, digits);
-    println!(
-        "h_gar_poly_basis_form_aggregated: {:?}",
-        h_gar_poly_basis_form_aggregated
-    );
     let norm_z = poly_matrix_norm_squared(&z_basis_form);
-    println!("norm_z: {:?}", norm_z);
     let norm_t = poly_3d_norm_squared(&all_t_i_basis_form_aggregated);
-    println!("norm_t: {:?}", norm_t);
     let norm_g = poly_3d_norm_squared(&g_matrix_aggregated);
-    println!("norm_g: {:?}", norm_g);
     let norm_h = poly_3d_norm_squared(&h_gar_poly_basis_form_aggregated);
-    println!("norm_h: {:?}", norm_h);
     let norm_sum = norm_z + norm_t + norm_g + norm_h;
-    println!("norm_sum: {:?}", norm_sum);
     assert!(norm_sum <= new_beta.pow(2));
 
+    println!("Verifier: Check amortized opening of inner commitments");
     // 4. check if Az is valid
     let a_times_z: Vec<PolynomialRing> = matrix_poly_times_poly_vector(&a_matrix.values, &z);
-    println!("a_times_z: {:?}", a_times_z);
     // calculate sum(ci * ti)
     let sum_c_times_t: Vec<PolynomialRing> = inner_product_poly_matrix_and_poly_vector(&t, &c);
-    println!("sum_c_times_t: {:?}", sum_c_times_t);
     assert_eq!(a_times_z, sum_c_times_t);
 
+    println!("Verifier: Check aggregated innerproduct constraints");
     // 5. check if <z, z> ?= sum(g_ij * c_i * c_j)
     let z_z_inner_product = inner_product_polynomial_ring_vector(&z, &z);
-    println!("z_z_inner_product: {:?}", z_z_inner_product);
 
     let mut sum_g_ij_c_i_c_j = zero_poly();
     for i in 0..size_r.value() {
@@ -1223,9 +1166,9 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
         }
     }
 
-    println!("sum_g_ij_c_i_c_j: {:?}", sum_g_ij_c_i_c_j);
     assert_eq!(z_z_inner_product, sum_g_ij_c_i_c_j);
 
+    println!("Verifier: Check aggregated linear constraints");
     // 6. check if sum(<phi_i, z> * c_i) ?= sum(h_ij * c_i * c_j)
     // aggregation parameters
     let size_k = lambda / log_q;
@@ -1242,7 +1185,6 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
         constraint_num_l,
         deg_bound_d,
     );
-    println!("a_ct_aggr: {:?}", a_ct_aggr);
     assert_eq!(a_ct_aggr.len(), size_k.value());
     assert_eq!(a_ct_aggr[0].len(), size_r.value());
     assert_eq!(a_ct_aggr[0][0].len(), size_r.value());
@@ -1261,16 +1203,13 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
         &psi,
         &omega
     );
-    println!("phi_ct_aggr: {:?}", phi_ct_aggr);
     assert_eq!(phi_ct_aggr.len(), size_k.value());
     assert_eq!(phi_ct_aggr[0].len(), size_r.value());
 
     // b_ct_aggr does not need to be calculated here, it's from prover
-    println!("b_ct_aggr: {:?}", b_ct_aggr);
     assert_eq!(b_ct_aggr.len(), size_k.value());
 
     let a_aggr = compute_aggr_constraint_a(&a_constraint, &a_ct_aggr, constraint_num_k, &alpha, &beta, size_r, size_k);
-    println!("a_aggr: {:?}", a_aggr);
     assert_eq!(a_aggr.len(), size_r.value());
     assert_eq!(a_aggr[0].len(), size_r.value());
 
@@ -1285,10 +1224,8 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
         deg_bound_d,
         size_k,
     );
-    println!("phi_aggr: {:?}", phi_aggr);
 
     let b_aggr = compute_aggr_constraint_b(&b_constraint, &b_ct_aggr, constraint_num_k, &alpha, &beta, size_k);
-    println!("b_aggr: {:?}", b_aggr);
 
     // check if sum(<phi_i, z> * c_i) ?= sum(h_ij * c_i * c_j)
     // calculate sum(<phi_i, z> * c_i)
@@ -1298,7 +1235,6 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
         zero_poly(),
         |acc, val| acc + val,
     );
-    println!("sum_phi_i_z_c_i: {:?}", sum_phi_i_z_c_i);
     // calculate sum(h_ij * c_i * c_j)
     let mut sum_h_ij_c_i_c_j = zero_poly();
     for i in 0..size_r.value() {
@@ -1306,10 +1242,13 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
             sum_h_ij_c_i_c_j = sum_h_ij_c_i_c_j + (&h[i][j] * &c[i] * &c[j]);
         }
     }
-    println!("sum_h_ij_c_i_c_j: {:?}", sum_h_ij_c_i_c_j);
     assert_eq!(sum_phi_i_z_c_i, sum_h_ij_c_i_c_j);
 
+    println!("Verifier: Compute aggregated relation");
     // 7. check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
+
+    println!("Verifier: Check norms of decomposed inner commitments(todo)");
+    println!("Verifier: Check opening of outer commitments(todo)");
     // 8. check if u1 is valid
     // 9. check if u2 is valid
 
@@ -1383,7 +1322,6 @@ mod tests {
         let c: Vec<PolynomialRing> = (0..size_r.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
         // 6.2 calculate z = sum(c_i * s_i) for all i = 1..r
         let z: Vec<PolynomialRing> = inner_product_poly_matrix_and_poly_vector(&witness_s, &c);
-        println!("z: {:?}", z);
 
         // check if sum(<phi_i, z> * c_i) ?= sum(h_ij * c_i * c_j)
         // calculate sum(<phi_i, z> * c_i)
@@ -1393,7 +1331,6 @@ mod tests {
             zero_poly(),
             |acc, val| acc + val,
         );
-        println!("sum_phi_i_z_c_i: {:?}", sum_phi_i_z_c_i);
         // calculate sum(h_ij * c_i * c_j)
         let mut sum_h_ij_c_i_c_j = zero_poly();
         for i in 0..size_r.value() {
@@ -1401,7 +1338,6 @@ mod tests {
                 sum_h_ij_c_i_c_j = sum_h_ij_c_i_c_j + (&h[i][j] * &c[i] * &c[j]);
             }
         }
-        println!("sum_h_ij_c_i_c_j: {:?}", sum_h_ij_c_i_c_j);
 
         assert_eq!(sum_phi_i_z_c_i, sum_h_ij_c_i_c_j);
     }
@@ -1435,7 +1371,6 @@ mod tests {
         }).collect();
 
         let b_aggr: PolynomialRing = calculate_b_constraint(&witness_s, &a_aggr, &phi_aggr);
-        println!("b_aggr: {:?}", b_aggr);
 
         // Calculate garbage polynomial g_ij = <s_i, s_j>
         let g: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
@@ -1445,7 +1380,6 @@ mod tests {
                 inner_product_polynomial_ring_vector(&s_i, &s_j)
             }).collect::<Vec<PolynomialRing>>()
         }).collect();
-        println!("g_gar_poly: {:?}", g);
 
         let h: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
             (0..size_r.value()).map(|j| {
@@ -1502,11 +1436,9 @@ mod tests {
         let c: Vec<PolynomialRing> = (0..size_r.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
         // 6.2 calculate z = sum(c_i * s_i) for all i = 1..r
         let z: Vec<PolynomialRing> = inner_product_poly_matrix_and_poly_vector(&witness_s, &c);
-        println!("z: {:?}", z);
 
         // check if <z, z> ?= sum(g_ij * c_i * c_j)
         let z_z_inner_product = inner_product_polynomial_ring_vector(&z, &z);
-        println!("z_z_inner_product: {:?}", z_z_inner_product);
 
         let mut sum_g_ij_c_i_c_j = zero_poly();
         for i in 0..size_r.value() {
@@ -1518,7 +1450,6 @@ mod tests {
             }
         }
 
-        println!("sum_g_ij_c_i_c_j: {:?}", sum_g_ij_c_i_c_j);
         assert_eq!(z_z_inner_product, sum_g_ij_c_i_c_j);
     }
 
@@ -1609,7 +1540,6 @@ mod tests {
             }).collect()
         }).collect();
         let b_k = calculate_b_constraint(&s, &a_constraint, &phi_constraint);
-        println!("b_k: {:?}", b_k);
         // assert_eq!(b_k, 1983);
     }
 
@@ -1651,8 +1581,6 @@ mod tests {
         //   8+20x+12x^2,
         //   8+20x+12x^2
         // ]
-        // print a
-        println!("{:?}", a);
         let result = matrix_poly_times_poly_vector(&a.values, &s_i);
         let expected = vec![
             PolynomialRing {
@@ -1704,10 +1632,8 @@ mod tests {
             let mut temp_vec: Vec<Vec<Zq>> = Vec::new();
             for i in vec {
                 let num = num_to_basis(Zq::from(i), basis, digits);
-                println!("num: {:?}", num);
                 temp_vec.push(num);
             }
-            println!("temp_vec for vec {:?}: {:?}", vec, temp_vec);
         }
     }
 
@@ -1821,7 +1747,6 @@ mod tests {
     fn test_generate_gaussian_distribution() {
         let nd = Zq::from(10);
         let matrix = generate_gaussian_distribution(nd);
-        println!("matrix: {:?}", matrix);
         assert_eq!(matrix.len(), 256);
         assert_eq!(matrix[0].len(), nd.value());
         assert_eq!(matrix[1].len(), nd.value());
@@ -1855,17 +1780,14 @@ mod tests {
 
         // Compute <a, b>
         let inner_ab = inner_product_zq_vector(&a.coefficients, &b.coefficients);
-        println!("inner_ab: {:?}", inner_ab);
         assert_eq!(
             inner_ab.value(),
             32
         );
         // Compute σ_{-1}(a)
         let sigma_inv_a = conjugation_automorphism(&a);
-        println!("sigma_inv_a: {:?}", sigma_inv_a);
         // Compute <σ_{-1}(a), b>
         let inner_sigma_inv_a_b = &sigma_inv_a * &b;
-        println!("inner_sigma_inv_a_b: {:?}", inner_sigma_inv_a_b);
 
         // Get the constant term of <σ_{-1}(a), b>
         let ct_inner_sigma_inv_a_b = inner_sigma_inv_a_b.coefficients[0];
