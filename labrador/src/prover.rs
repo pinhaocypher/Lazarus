@@ -296,43 +296,6 @@ struct Tr {
     h: Vec<Vec<PolynomialRing>>,
 }
 
-fn verify_inner_product_and_z_computation(witness_s: &Vec<Vec<PolynomialRing>>) {
-    let deg_bound_d = Zq::new(8); // random polynomial degree bound
-    let size_r = Zq::from(witness_s.len());
-    let g: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
-        (0..size_r.value()).map(|j| {
-            let s_i = &witness_s[i];
-            let s_j = &witness_s[j];
-            inner_product_polynomial_ring_vector(&s_i, &s_j)
-        }).collect::<Vec<PolynomialRing>>()
-    }).collect();
-
-    let c: Vec<PolynomialRing> = (0..size_r.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
-    // 6.2 calculate z = sum(c_i * s_i) for all i = 1..r
-    let z: Vec<PolynomialRing> = inner_product_poly_matrix_and_poly_vector(&witness_s, &c);
-    println!("z: {:?}", z);
-    // Send z, t_i, g_ij, h_ij to verifier
-    // transcript.add(z);
-    // return transcript;
-
-    // check if <z, z> ?= sum(g_ij * c_i * c_j)
-    let z_z_inner_product = inner_product_polynomial_ring_vector(&z, &z);
-    println!("z_z_inner_product: {:?}", z_z_inner_product);
-
-    let mut sum_g_ij_c_i_c_j = zero_poly();
-    for i in 0..size_r.value() {
-        for j in 0..size_r.value() {
-            let g_ij = &g[i][j]; // Borrow g[i][j] instead of moving it
-            let c_i = &c[i];
-            let c_j = &c[j];
-            sum_g_ij_c_i_c_j = sum_g_ij_c_i_c_j + (g_ij * c_i * c_j);
-        }
-    }
-
-    println!("sum_g_ij_c_i_c_j: {:?}", sum_g_ij_c_i_c_j);
-    assert_eq!(z_z_inner_product, sum_g_ij_c_i_c_j);
-}
-
 // 4.3.1 calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
 fn compute_aggr_ct_constraint_a(
     a_constraint_ct: &Vec<Vec<Vec<PolynomialRing>>>,
@@ -1208,7 +1171,7 @@ mod tests {
                 generate_random_polynomial_ring(deg_bound_d.value()),
             ],
         ];
-        // verify_inner_product_and_z_computation(&witness_s);
+
         let size_r = Zq::from(witness_s.len());
         let size_n = Zq::from(witness_s[0].len());
         let g: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
