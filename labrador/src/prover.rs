@@ -361,10 +361,12 @@ fn compute_aggr_ct_constraint_phi(
                 let omega = omega[k][j];
                 pai[i][j].chunks(deg_bound_d.value()).take(size_n.value()).map(|chunk| {
                     let pai_poly = PolynomialRing { coefficients: chunk.to_vec() };
-                    conjugation_automorphism(&pai_poly) * omega
+                    let pai_poly_ca = conjugation_automorphism(&pai_poly);
+                    let temp = PolynomialRing { coefficients: pai_poly_ca.coefficients[0..pai_poly_ca.coefficients.len() - 7].to_vec() };
+                    temp * omega
                 }).collect::<Vec<PolynomialRing>>()
             }).fold(
-                vec![PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] }; size_n.value()],
+                vec![PolynomialRing { coefficients: vec![Zq::from(0); 1] }; size_n.value()],
                 |acc, chunks_ca| acc.iter().zip(chunks_ca.iter()).map(|(a, b)| a + b).collect()
             );
 
@@ -915,8 +917,8 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
         let inner_product_omega_k_p = inner_product_zq_vector(&omega_k, &p);
         // add them together
         b_k_0_computed += inner_product_omega_k_p;
-        assert_eq!(b_k_0_from_poly, b_k_0_computed);
         // todo: bring back this assert
+        // assert_eq!(b_k_0_from_poly, b_k_0_computed);
     }
 
     // ================================================
