@@ -384,7 +384,7 @@ fn compute_aggr_ct_constraint_b(
     deg_bound_d: Zq,
     witness_s: &Vec<Vec<PolynomialRing>>,
 ) -> Vec<PolynomialRing> {
-    let b_ct_aggr: Vec<PolynomialRing> = (0..size_k.value())
+    (0..size_k.value())
         .map(|k| {
             (0..size_r.value())
                 .map(|i| {
@@ -401,8 +401,7 @@ fn compute_aggr_ct_constraint_b(
                     |acc, x| acc + x
                 )
         })
-        .collect();
-    b_ct_aggr
+        .collect::<Vec<PolynomialRing>>()
 }
 
 // aggregation: a_i = sum(alpha_k * a_ij) + sum(beta_k * a_ij^{''(k)})
@@ -502,6 +501,10 @@ fn compute_aggr_constraint_b(
 
     // Sum part1 and part2
     part1 + part2
+}
+
+fn zero_poly() -> PolynomialRing {
+    PolynomialRing { coefficients: vec![Zq::from(0); 1] }
 }
 
 fn check_aggr_relation(a_aggr: &Vec<Vec<PolynomialRing>>, b_aggr: PolynomialRing, g: &Vec<Vec<PolynomialRing>>, h: &Vec<Vec<PolynomialRing>>) {
@@ -1112,10 +1115,6 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
         h,
     };
     return (st, tr);
-}
-
-fn zero_poly() -> PolynomialRing {
-    PolynomialRing { coefficients: vec![Zq::from(0); 1] }
 }
 
 fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<Vec<Vec<RqMatrix>>>, d_matrix: &Vec<Vec<Vec<RqMatrix>>>) {
