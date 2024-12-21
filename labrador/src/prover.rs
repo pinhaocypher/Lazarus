@@ -1246,6 +1246,7 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
 
     println!("Verifier: Compute aggregated relation");
     // 7. check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
+    check_aggr_relation(&a_aggr, b_aggr, &g, &h);
 
     println!("Verifier: Check norms of decomposed inner commitments(todo)");
     println!("Verifier: Check opening of outer commitments(todo)");
