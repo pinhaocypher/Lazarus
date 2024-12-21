@@ -1033,6 +1033,31 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     // transcript.add(z);
     // return transcript;
 
+    // check if sum(<phi_i, z> * c_i) ?= sum(h_ij * c_i * c_j)
+    // calculate sum(<phi_i, z> * c_i)
+    let sum_phi_i_z_c_i = phi_aggr.iter().zip(c.iter()).map(|(phi_i, c_i)| {
+        inner_product_polynomial_ring_vector(&phi_i, &z) * c_i
+    }).fold(
+        zero_poly(),
+        |acc, val| acc + val,
+    );
+    println!("sum_phi_i_z_c_i: {:?}", sum_phi_i_z_c_i);
+    // calculate sum(h_ij * c_i * c_j)
+    let mut sum_h_ij_c_i_c_j = zero_poly();
+    for i in 0..size_r.value() {
+        for j in 0..size_r.value() {
+            let h_ij = &h[i][j]; // Borrow h[i][j] instead of moving it
+            let c_i = &c[i];
+            let c_j = &c[j];
+            sum_h_ij_c_i_c_j = sum_h_ij_c_i_c_j + (h_ij * c_i * c_j);
+        }
+    }
+    println!("sum_h_ij_c_i_c_j: {:?}", sum_h_ij_c_i_c_j);
+
+    assert_eq!(sum_phi_i_z_c_i, sum_h_ij_c_i_c_j);
+
+    // Send u2 to verifier
+    // transcript.add(u2)
     let st = St {
         a_constraint,
         phi_constraint,
@@ -1172,7 +1197,90 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
 
     println!("sum_g_ij_c_i_c_j: {:?}", sum_g_ij_c_i_c_j);
     assert_eq!(z_z_inner_product, sum_g_ij_c_i_c_j);
+
     // 6. check if sum(<phi_i, z> * c_i) ?= sum(h_ij * c_i * c_j)
+    // aggregation parameters
+    let size_k = lambda / log_q;
+    let constraint_num_l = Zq::new(2); // Define L
+    let constraint_num_k = Zq::new(2);
+
+    // 6.1 caculate b^{''(k)}
+    // 6.1.1 calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
+    let a_constraint_ct_aggr = compute_aggr_ct_constraint_a(
+        &a_constraint_ct,
+        &psi,
+        size_k,
+        size_r,
+        constraint_num_l,
+        deg_bound_d,
+    );
+    println!("a_constraint_ct_aggr: {:?}", a_constraint_ct_aggr);
+    assert_eq!(a_constraint_ct_aggr.len(), size_k.value());
+    assert_eq!(a_constraint_ct_aggr[0].len(), size_r.value());
+    assert_eq!(a_constraint_ct_aggr[0][0].len(), size_r.value());
+    // 6.1.2 calculate phi_i^{''(k)} =
+    //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
+    //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
+    let phi_ct_aggr = compute_aggr_ct_constraint_phi(
+        &phi_constraint_ct,
+        &pai,
+        size_k,
+        size_r,
+        constraint_num_l,
+        deg_bound_d,
+        size_n,
+        double_lambda,
+        &psi,
+        &omega
+    );
+    println!("phi_ct_aggr: {:?}", phi_ct_aggr);
+    assert_eq!(phi_ct_aggr.len(), size_k.value());
+    assert_eq!(phi_ct_aggr[0].len(), size_r.value());
+
+    // b_ct_aggr does not need to be calculated here, it's from prover
+    println!("b_ct_aggr: {:?}", b_ct_aggr);
+    assert_eq!(b_ct_aggr.len(), size_k.value());
+
+    let a_aggr = compute_aggr_constraint_a(&a_constraint, &a_constraint_ct_aggr, constraint_num_k, &alpha, &beta, size_r, size_k);
+    println!("a_aggr: {:?}", a_aggr);
+    assert_eq!(a_aggr.len(), size_r.value());
+    assert_eq!(a_aggr[0].len(), size_r.value());
+
+    let phi_aggr = compute_aggr_constraint_phi(
+        &phi_constraint,
+        &phi_ct_aggr,
+        constraint_num_k,
+        &alpha,
+        &beta,
+        size_r,
+        size_n,
+        deg_bound_d,
+        size_k,
+    );
+    println!("phi_aggr: {:?}", phi_aggr);
+
+    let b_aggr = compute_aggr_constraint_b(&b_constraint, &b_ct_aggr, constraint_num_k, &alpha, &beta, size_k);
+    println!("b_aggr: {:?}", b_aggr);
+
+    // check if sum(<phi_i, z> * c_i) ?= sum(h_ij * c_i * c_j)
+    // calculate sum(<phi_i, z> * c_i)
+    let sum_phi_i_z_c_i = phi_aggr.iter().zip(c.iter()).map(|(phi_i, c_i)| {
+        inner_product_polynomial_ring_vector(&phi_i, &z) * c_i
+    }).fold(
+        zero_poly(),
+        |acc, val| acc + val,
+    );
+    println!("sum_phi_i_z_c_i: {:?}", sum_phi_i_z_c_i);
+    // calculate sum(h_ij * c_i * c_j)
+    let mut sum_h_ij_c_i_c_j = zero_poly();
+    for i in 0..size_r.value() {
+        for j in 0..size_r.value() {
+            sum_h_ij_c_i_c_j = sum_h_ij_c_i_c_j + (&h[i][j] * &c[i] * &c[j]);
+        }
+    }
+    println!("sum_h_ij_c_i_c_j: {:?}", sum_h_ij_c_i_c_j);
+    assert_eq!(sum_phi_i_z_c_i, sum_h_ij_c_i_c_j);
+
     // 7. check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
     // 8. check if u1 is valid
     // 9. check if u2 is valid
@@ -1209,6 +1317,65 @@ mod tests {
         // todo: st should be publicly shared
         let (st, tr) = prove(&a_matrix, &b_matrix, &c_matrix, &d_matrix);
         verify(st, tr, &a_matrix, &b_matrix, &c_matrix, &d_matrix);
+    }
+
+    #[test]
+    fn test_h_verify() {
+        let size_r = Zq::new(3); // r: Number of witness elements
+        let size_n = Zq::new(5); // n
+        let deg_bound_d = Zq::new(8); // random polynomial degree bound
+        // generate size_r * size_n witness_s
+        let witness_s: Vec<Vec<PolynomialRing>> = (0..size_r.value())
+            .map(|_| {
+                (0..size_n.value())
+                    .map(|_| generate_random_polynomial_ring(deg_bound_d.value()) * Zq::from(2))
+                    .collect()
+            })
+            .collect();
+
+        // generate size_r * size_n phi_aggr
+        let phi_aggr: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
+            (0..size_n.value()).map(|j| {
+                generate_random_polynomial_ring(deg_bound_d.value())
+            }).collect::<Vec<PolynomialRing>>()
+        }).collect();
+
+        let h: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
+            (0..size_r.value()).map(|j| {
+                let phi_i = &phi_aggr[i];
+                let phi_j = &phi_aggr[j];
+                let s_i = &witness_s[i];
+                let s_j = &witness_s[j];
+                // todo: what if inner_product_ij is not divisible by 2???
+                let inner_product_ij = inner_product_polynomial_ring_vector(&phi_i, &s_j) + inner_product_polynomial_ring_vector(&phi_j, &s_i);
+                inner_product_ij / Zq::from(2)
+            }).collect::<Vec<PolynomialRing>>()
+        }).collect();
+
+        let c: Vec<PolynomialRing> = (0..size_r.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
+        // 6.2 calculate z = sum(c_i * s_i) for all i = 1..r
+        let z: Vec<PolynomialRing> = inner_product_poly_matrix_and_poly_vector(&witness_s, &c);
+        println!("z: {:?}", z);
+
+        // check if sum(<phi_i, z> * c_i) ?= sum(h_ij * c_i * c_j)
+        // calculate sum(<phi_i, z> * c_i)
+        let sum_phi_i_z_c_i = phi_aggr.iter().zip(c.iter()).map(|(phi_i, c_i)| {
+            inner_product_polynomial_ring_vector(&phi_i, &z) * c_i
+        }).fold(
+            zero_poly(),
+            |acc, val| acc + val,
+        );
+        println!("sum_phi_i_z_c_i: {:?}", sum_phi_i_z_c_i);
+        // calculate sum(h_ij * c_i * c_j)
+        let mut sum_h_ij_c_i_c_j = zero_poly();
+        for i in 0..size_r.value() {
+            for j in 0..size_r.value() {
+                sum_h_ij_c_i_c_j = sum_h_ij_c_i_c_j + (&h[i][j] * &c[i] * &c[j]);
+            }
+        }
+        println!("sum_h_ij_c_i_c_j: {:?}", sum_h_ij_c_i_c_j);
+
+        assert_eq!(sum_phi_i_z_c_i, sum_h_ij_c_i_c_j);
     }
 
     #[test]
