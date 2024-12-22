@@ -306,7 +306,7 @@ fn compute_aggr_ct_constraint_a(
     constraint_num_l: Zq,
     deg_bound_d: Zq,
 ) -> Vec<Vec<Vec<PolynomialRing>>> {
-    let a_constraint_ct_aggr: Vec<Vec<Vec<PolynomialRing>>> = (0..size_k.value())
+    let a_ct_aggr: Vec<Vec<Vec<PolynomialRing>>> = (0..size_k.value())
         .map(|k| {
             let psi_k = &psi[k];
             (0..size_r.value())
@@ -327,7 +327,7 @@ fn compute_aggr_ct_constraint_a(
                 .collect::<Vec<Vec<PolynomialRing>>>()
         })
         .collect();
-    a_constraint_ct_aggr
+    a_ct_aggr
 }
 
 // 4.3.2 aggregation: calculate phi_i^{''(k)} =
@@ -379,7 +379,7 @@ fn compute_aggr_ct_constraint_phi(
 
 // 4.3.3 aggregation: calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>)
 fn compute_aggr_ct_constraint_b(
-    a_constraint_ct_aggr: &Vec<Vec<Vec<PolynomialRing>>>,
+    a_ct_aggr: &Vec<Vec<Vec<PolynomialRing>>>,
     phi_ct_aggr: &Vec<Vec<Vec<PolynomialRing>>>,
     size_k: Zq,
     size_r: Zq,
@@ -391,7 +391,7 @@ fn compute_aggr_ct_constraint_b(
             (0..size_r.value())
                 .map(|i| {
                     (0..size_r.value())
-                        .map(|j| &a_constraint_ct_aggr[k][i][j] * inner_product_polynomial_ring_vector(&witness_s[i], &witness_s[j]))
+                        .map(|j| &a_ct_aggr[k][i][j] * inner_product_polynomial_ring_vector(&witness_s[i], &witness_s[j]))
                         .fold(
                             PolynomialRing { coefficients: vec![Zq::from(0); deg_bound_d.value()] },
                             |acc, x| acc + x
@@ -861,7 +861,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
 
     // 4.3 caculate b^{''(k)}
     // 4.3.1 calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
-    let a_constraint_ct_aggr = compute_aggr_ct_constraint_a(
+    let a_ct_aggr = compute_aggr_ct_constraint_a(
         &a_constraint_ct,
         &psi,
         size_k,
@@ -869,9 +869,9 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
         constraint_num_l,
         deg_bound_d,
     );
-    assert_eq!(a_constraint_ct_aggr.len(), size_k.value());
-    assert_eq!(a_constraint_ct_aggr[0].len(), size_r.value());
-    assert_eq!(a_constraint_ct_aggr[0][0].len(), size_r.value());
+    assert_eq!(a_ct_aggr.len(), size_k.value());
+    assert_eq!(a_ct_aggr[0].len(), size_r.value());
+    assert_eq!(a_ct_aggr[0][0].len(), size_r.value());
     // 4.3.2 calculate phi_i^{''(k)} =
     //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
     //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
@@ -892,7 +892,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
 
     // 4.3.3 calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>)
     let b_ct_aggr = compute_aggr_ct_constraint_b(
-        &a_constraint_ct_aggr,
+        &a_ct_aggr,
         &phi_ct_aggr,
         size_k,
         size_r,
