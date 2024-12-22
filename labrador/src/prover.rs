@@ -1791,6 +1791,17 @@ mod tests {
         let sigma_inv_a = conjugation_automorphism(&a);
         // Compute <σ_{-1}(a), b>
         let inner_sigma_inv_a_b = &sigma_inv_a * &b;
+        // = -12x^{65}-28x^{64}-23x^{63}-12x^{62}+6x^{2}+5x+4
+        // = 23x^{63}-12x^{62}+6x^{2}+17x+32 (since x^64 = -1)
+        assert_eq!(inner_sigma_inv_a_b.coefficients.len(), 64);
+        assert_eq!(inner_sigma_inv_a_b.coefficients[0], Zq::from(32));
+        assert_eq!(inner_sigma_inv_a_b.coefficients[1], Zq::from(17));
+        assert_eq!(inner_sigma_inv_a_b.coefficients[2], Zq::from(6));
+        assert_eq!(inner_sigma_inv_a_b.coefficients[62], Zq::from(Zq::Q - 12));
+        assert_eq!(inner_sigma_inv_a_b.coefficients[63], Zq::from(Zq::Q - 23));
+        for i in 3..62 {
+            assert_eq!(inner_sigma_inv_a_b.coefficients[i], Zq::from(0));
+        }
 
         // Get the constant term of <σ_{-1}(a), b>
         let ct_inner_sigma_inv_a_b = inner_sigma_inv_a_b.coefficients[0];
