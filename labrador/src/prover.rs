@@ -1346,6 +1346,193 @@ mod tests {
     }
 
     #[test]
+    fn test_aggr_relation0() {
+        let size_r = Zq::new(3); // r: Number of witness elements
+        let size_n = Zq::new(5); // n
+        let deg_bound_d = Zq::new(8); // random polynomial degree bound
+        let lambda = Zq::new(128);
+        let double_lambda = lambda * Zq::new(2);
+        let constraint_num_l = Zq::new(2);
+        let constraint_num_k = Zq::new(2);
+        let log_q = Zq::new(2);
+        let mut rng = rand::thread_rng();
+        // generate size_r * size_n witness_s
+        let witness_s: Vec<Vec<PolynomialRing>> = (0..size_r.value())
+            .map(|_| {
+                (0..size_n.value())
+                    .map(|_| generate_random_polynomial_ring(deg_bound_d.value()) * Zq::from(2))
+                    .collect()
+            })
+            .collect();
+
+        let a_constraint: Vec<Vec<Vec<PolynomialRing>>> = (0..constraint_num_k.value())
+            .map(|_| {
+                (0..size_r.value())
+                    .map(|_| {
+                        (0..size_n.value())
+                            .map(|_| generate_random_polynomial_ring(deg_bound_d.value()))
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect();
+        let phi_constraint: Vec<Vec<Vec<PolynomialRing>>> = (0..constraint_num_k.value())
+            .map(|_| {
+                (0..size_r.value())
+                    .map(|_| {
+                        (0..size_n.value())
+                            .map(|_| generate_random_polynomial_ring(deg_bound_d.value()))
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect();
+
+        let b_constraint: Vec<PolynomialRing> = (0..constraint_num_k.value())
+            .map(|k| calculate_b_constraint(&witness_s, &a_constraint[k], &phi_constraint[k]))
+            .collect();
+
+        let a_constraint_ct: Vec<Vec<Vec<PolynomialRing>>> = (0..constraint_num_l.value())
+            .map(|_| {
+                (0..size_r.value())
+                    .map(|_| {
+                        (0..size_n.value())
+                            .map(|_| generate_random_polynomial_ring(deg_bound_d.value()))
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect();
+
+        // Generate random phi^(k)_{i}: k length vector of matrix, matrix length is r x n, each element in matrix is a Zq
+        let phi_constraint_ct: Vec<Vec<Vec<PolynomialRing>>> = (0..constraint_num_l.value())
+            .map(|_| {
+                (0..size_r.value())
+                    .map(|_| {
+                        (0..size_n.value())
+                            .map(|_| generate_random_polynomial_ring(deg_bound_d.value()))
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect();
+        assert_eq!(phi_constraint_ct.len(), constraint_num_l.value());
+        assert_eq!(phi_constraint_ct[0].len(), size_r.value());
+        assert_eq!(phi_constraint_ct[0][0].len(), size_n.value());
+
+        println!("Prover: Do JL projection");
+        // 3. GOAL: JL projection
+        let nd = size_n * deg_bound_d;
+        // generate gaussian distribution matrices
+        // there are size_r matrices, each matrix size is 256 * nd
+        // TODO: should from verifier
+        let pai = (0..size_r.value())
+            .map(|_| generate_gaussian_distribution(nd))
+            .collect::<Vec<Vec<Vec<Zq>>>>();
+
+        let size_k = lambda / log_q;
+        let psi: Vec<Vec<Zq>> = (0..size_k.value())
+            .map(|_| (0..constraint_num_l.value()).map(|_| Zq::new(rng.gen_range(1..10))).collect())
+            .collect();
+        assert_eq!(psi.len(), size_k.value());
+        assert_eq!(psi[0].len(), constraint_num_l.value());
+
+        // 4.2 omega^(k) is randomly chosen from Z_q^{256}
+        //      (Both using Guassian Distribution)
+        let omega: Vec<Vec<Zq>> = (0..size_k.value())
+            .map(|_| (0..double_lambda.value()).map(|_| Zq::new(rng.gen_range(1..10))).collect())
+            .collect();
+        assert_eq!(omega.len(), size_k.value());
+        assert_eq!(omega[0].len(), double_lambda.value());
+
+        // 4.3 caculate b^{''(k)}
+        // 4.3.1 calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
+        let a_ct_aggr = compute_aggr_ct_constraint_a(
+            &a_constraint_ct,
+            &psi,
+            size_k,
+            size_r,
+            constraint_num_l,
+            deg_bound_d,
+        );
+        assert_eq!(a_ct_aggr.len(), size_k.value());
+        assert_eq!(a_ct_aggr[0].len(), size_r.value());
+        assert_eq!(a_ct_aggr[0][0].len(), size_r.value());
+        // 4.3.2 calculate phi_i^{''(k)} =
+        //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
+        //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
+        let phi_ct_aggr = compute_aggr_ct_constraint_phi(
+            &phi_constraint_ct,
+            &pai,
+            size_k,
+            size_r,
+            constraint_num_l,
+            deg_bound_d,
+            size_n,
+            double_lambda,
+            &psi,
+            &omega
+        );
+        assert_eq!(phi_ct_aggr.len(), size_k.value());
+        assert_eq!(phi_ct_aggr[0].len(), size_r.value());
+
+        // 4.3.3 calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>)
+        let b_ct_aggr = compute_aggr_ct_constraint_b(
+            &a_ct_aggr,
+            &phi_ct_aggr,
+            size_k,
+            size_r,
+            deg_bound_d,
+            &witness_s,
+        );
+        assert_eq!(b_ct_aggr.len(), size_k.value());
+
+        let alpha: Vec<PolynomialRing> = (0..constraint_num_k.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
+        let beta: Vec<PolynomialRing> = (0..size_k.value()).map(|_| generate_random_polynomial_ring(deg_bound_d.value())).collect();
+
+        let a_aggr = compute_aggr_constraint_a(&a_constraint, &a_ct_aggr, constraint_num_k, &alpha, &beta, size_r, size_k);
+        assert_eq!(a_aggr.len(), size_r.value());
+        assert_eq!(a_aggr[0].len(), size_r.value());
+
+        let phi_aggr = compute_aggr_constraint_phi(
+            &phi_constraint,
+            &phi_ct_aggr,
+            constraint_num_k,
+            &alpha,
+            &beta,
+            size_r,
+            size_n,
+            deg_bound_d,
+            size_k,
+        );
+
+        let b_aggr = compute_aggr_constraint_b(&b_constraint, &b_ct_aggr, constraint_num_k, &alpha, &beta, size_k);
+
+        // Calculate garbage polynomial g_ij = <s_i, s_j>
+        let g: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
+            (0..size_r.value()).map(|j| {
+                let s_i = &witness_s[i];
+                let s_j = &witness_s[j];
+                inner_product_polynomial_ring_vector(&s_i, &s_j)
+            }).collect::<Vec<PolynomialRing>>()
+        }).collect();
+
+        let h: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
+            (0..size_r.value()).map(|j| {
+                let phi_i = &phi_aggr[i];
+                let phi_j = &phi_aggr[j];
+                let s_i = &witness_s[i];
+                let s_j = &witness_s[j];
+                // todo: what if inner_product_ij is not divisible by 2???
+                let inner_product_ij = inner_product_polynomial_ring_vector(&phi_i, &s_j) + inner_product_polynomial_ring_vector(&phi_j, &s_i);
+                inner_product_ij / Zq::from(2)
+            }).collect::<Vec<PolynomialRing>>()
+        }).collect();
+
+        check_aggr_relation(&a_aggr, b_aggr, &g, &h);
+    }
+
+    #[test]
     fn test_aggr_relation() {
         let size_r = Zq::new(3); // r: Number of witness elements
         let size_n = Zq::new(5); // n
