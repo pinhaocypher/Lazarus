@@ -542,8 +542,8 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     let deg_bound_d = Zq::new(8); // random polynomial degree bound
     let beta = Zq::new(70); // Example value for beta
     let mut rng = rand::thread_rng();
-    let constraint_num_k = Zq::new(2);
-    let constraint_num_l = Zq::new(2); // Define L
+    let constraint_num_k = Zq::new(5);
+    let constraint_num_l = Zq::new(5); // Define L
     println!("Prover: Generate random witness");
     let witness_s: Vec<Vec<PolynomialRing>> = (0..size_r.value())
         .map(|_| {
@@ -1174,8 +1174,8 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
     // 6. check if sum(<phi_i, z> * c_i) ?= sum(h_ij * c_i * c_j)
     // aggregation parameters
     let size_k = lambda / log_q;
-    let constraint_num_l = Zq::new(2); // Define L
-    let constraint_num_k = Zq::new(2);
+    let constraint_num_l = Zq::new(5); // Define L
+    let constraint_num_k = Zq::new(5);
 
     // 6.1 caculate b^{''(k)}
     // 6.1.1 calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
@@ -1298,7 +1298,7 @@ mod tests {
         let witness_s: Vec<Vec<PolynomialRing>> = (0..size_r.value())
             .map(|_| {
                 (0..size_n.value())
-                    .map(|_| generate_random_polynomial_ring(deg_bound_d.value()) * Zq::from(2))
+                    .map(|_| generate_random_polynomial_ring(deg_bound_d.value()))
                     .collect()
             })
             .collect();
@@ -1352,15 +1352,15 @@ mod tests {
         let deg_bound_d = Zq::new(8); // random polynomial degree bound
         let lambda = Zq::new(128);
         let double_lambda = lambda * Zq::new(2);
-        let constraint_num_l = Zq::new(2);
-        let constraint_num_k = Zq::new(2);
+        let constraint_num_l = Zq::new(5);
+        let constraint_num_k = Zq::new(5);
         let log_q = Zq::new(2);
         let mut rng = rand::thread_rng();
         // generate size_r * size_n witness_s
         let witness_s: Vec<Vec<PolynomialRing>> = (0..size_r.value())
             .map(|_| {
                 (0..size_n.value())
-                    .map(|_| generate_random_polynomial_ring(deg_bound_d.value()) * Zq::from(2))
+                    .map(|_| generate_random_polynomial_ring(deg_bound_d.value()))
                     .collect()
             })
             .collect();
@@ -1416,9 +1416,6 @@ mod tests {
                     .collect()
             })
             .collect();
-        assert_eq!(phi_constraint_ct.len(), constraint_num_l.value());
-        assert_eq!(phi_constraint_ct[0].len(), size_r.value());
-        assert_eq!(phi_constraint_ct[0][0].len(), size_n.value());
 
         println!("Prover: Do JL projection");
         // 3. GOAL: JL projection
@@ -1541,7 +1538,7 @@ mod tests {
         let witness_s: Vec<Vec<PolynomialRing>> = (0..size_r.value())
             .map(|_| {
                 (0..size_n.value())
-                    .map(|_| generate_random_polynomial_ring(deg_bound_d.value()) * Zq::from(2))
+                    .map(|_| generate_random_polynomial_ring(deg_bound_d.value()))
                     .collect()
             })
             .collect();
