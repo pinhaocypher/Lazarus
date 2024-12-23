@@ -1147,6 +1147,7 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
     let norm_g = poly_3d_norm_squared(&g_matrix_aggregated);
     let norm_h = poly_3d_norm_squared(&h_gar_poly_basis_form_aggregated);
     let norm_sum = norm_z + norm_t + norm_g + norm_h;
+    println!("Verifier: Check norms of decomposed inner commitments");
     assert!(norm_sum <= new_beta.pow(2));
 
     println!("Verifier: Check amortized opening of inner commitments");
@@ -1252,7 +1253,6 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
     // 7. check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
     check_aggr_relation(&a_aggr, b_aggr, &g, &h);
 
-    println!("Verifier: Check norms of decomposed inner commitments(todo)");
     println!("Verifier: Check opening of outer commitments(todo)");
     // 8. check if u1 is valid
     // 9. check if u2 is valid
@@ -1424,7 +1424,6 @@ mod tests {
         let nd = size_n * deg_bound_d;
         // generate gaussian distribution matrices
         // there are size_r matrices, each matrix size is 256 * nd
-        // TODO: should from verifier
         let pai = (0..size_r.value())
             .map(|_| generate_gaussian_distribution(nd))
             .collect::<Vec<Vec<Vec<Zq>>>>();
