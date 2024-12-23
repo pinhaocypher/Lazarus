@@ -526,6 +526,55 @@ fn check_aggr_relation(a_aggr: &Vec<Vec<PolynomialRing>>, b_aggr: PolynomialRing
     assert_eq!(sum_a_ij_g_ij + sum_h_ii, b_aggr);
 }
 
+
+// calculate u2 = sum D_ij * h_ij^(k) for all k = 1..(t1-1)
+fn calculate_outer_comm_u2(
+    d_matrix: &Vec<Vec<Vec<RqMatrix>>>,
+    h_gar_poly_basis_form_aggregated: &Vec<Vec<Vec<PolynomialRing>>>,
+    t2: Zq,
+    kappa2: Zq,
+    size_r: Zq,
+    size_n: Zq,
+    deg_bound_d: Zq,
+) -> Vec<PolynomialRing> {
+    (0..size_r.value())
+        .flat_map(|i| {
+            (i..size_r.value()).flat_map(move |j| {
+                (0..t2.value()).map(move |k| (i, j, k))
+            })
+        })
+    .fold(
+        vec![
+            PolynomialRing {
+                coefficients: vec![Zq::from(0); deg_bound_d.value()]
+            };
+            kappa2.value()
+        ],
+        |acc, (i, j, k)| {
+            let d_i_j_k = &d_matrix[i][j][k];
+            let h_i_j = &h_gar_poly_basis_form_aggregated[i][j];
+            let d_i_j_k_times_h_i_j = d_i_j_k.values
+                .iter()
+                .map(|row| {
+                    row.iter()
+                        .zip(h_i_j.iter())
+                        .map(|(c, h)| c * h)
+                        .fold(
+                            PolynomialRing {
+                                coefficients: vec![Zq::from(0); size_n.value()],
+                            },
+                            |acc, val| acc + val,
+                        )
+                })
+                .collect::<Vec<PolynomialRing>>();
+            acc.iter()
+                .zip(d_i_j_k_times_h_i_j.iter())
+                .map(|(a, b)| a + b)
+                .collect()
+        },
+    )
+}
+
 #[time_profiler()]
 pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<Vec<Vec<RqMatrix>>>, d_matrix: &Vec<Vec<Vec<RqMatrix>>>) -> (St, Tr) {
     // s is a vector of size r. each s_i is a PolynomialRing<Zq> with n coefficients
@@ -974,43 +1023,14 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     let h_gar_poly_basis_form_aggregated = poly_matrix_decompose_and_aggregate(&h, basis, digits);
 
     // 5.4 u2 = sum D_ij * h_ij^(k) for all k = 1..(t1-1)
-    let u2 = (0..size_r.value())
-        .flat_map(|i| {
-            (i..size_r.value()).flat_map(move |j| {
-                (0..t2.value()).map(move |k| (i, j, k))
-            })
-        })
-        .fold(
-            vec![
-                PolynomialRing {
-                    coefficients: vec![Zq::from(0); deg_bound_d.value()]
-                };
-                kappa2.value()
-            ],
-            |acc, (i, j, k)| {
-                let d_i_j_k = &d_matrix[i][j][k];
-                let h_i_j = &h_gar_poly_basis_form_aggregated[i][j];
-                let d_i_j_k_times_h_i_j = d_i_j_k.values
-                    .iter()
-                    .map(|row| {
-                        row.iter()
-                            .zip(h_i_j.iter())
-                            .map(|(c, h)| c * h)
-                            .fold(
-                                PolynomialRing {
-                                    coefficients: vec![Zq::from(0); size_n.value()],
-                                },
-                                |acc, val| acc + val,
-                            )
-                    })
-                    .collect::<Vec<PolynomialRing>>();
-                acc.iter()
-                    .zip(d_i_j_k_times_h_i_j.iter())
-                    .map(|(a, b)| a + b)
-                    .collect()
-            },
-        );
-
+    let u2 = calculate_outer_comm_u2(&d_matrix,
+        &h_gar_poly_basis_form_aggregated,
+        t2,
+        kappa2,
+        size_r,
+        size_n,
+        deg_bound_d
+    );
     println!("Prover: Send proof u2");
 
     // Send u2 to verifier
