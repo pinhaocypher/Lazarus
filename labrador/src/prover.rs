@@ -73,9 +73,8 @@ fn calculate_b_constraint(
             b = b + (inner_product_si_sj * a_constr);
         }
         // calculate inner product of s[i] and phi
-        for (x, y) in s[i].iter().zip(phi_constraint[i].iter()) {
-            b = b + (x * y);
-        }
+        let inner_product_si_phi = inner_product_polynomial_ring_vector(&s[i], &phi_constraint[i]);
+        b = b + inner_product_si_phi;
     }
 
     b
