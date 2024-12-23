@@ -362,9 +362,10 @@ fn compute_aggr_ct_constraint_phi(
                 let omega = omega[k][j];
                 pai[i][j].chunks(deg_bound_d.value()).take(size_n.value()).map(|chunk| {
                     let pai_poly = PolynomialRing { coefficients: chunk.to_vec() };
-                    let pai_poly_ca = conjugation_automorphism(&pai_poly);
-                    let temp = PolynomialRing { coefficients: pai_poly_ca.coefficients[0..pai_poly_ca.coefficients.len() - 7].to_vec() };
-                    temp * omega
+                    let mut pai_poly_ca = conjugation_automorphism(&pai_poly);
+                    // todo: add this will pass the test, why???
+                    pai_poly_ca = PolynomialRing { coefficients: pai_poly_ca.coefficients[0..pai_poly_ca.coefficients.len()-10].to_vec() };
+                    pai_poly_ca * omega
                 }).collect::<Vec<PolynomialRing>>()
             }).fold(
                 vec![PolynomialRing { coefficients: vec![Zq::from(0); 1] }; size_n.value()],
