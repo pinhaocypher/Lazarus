@@ -184,8 +184,7 @@ fn conjugation_automorphism(poly: &PolynomialRing) -> PolynomialRing {
 fn generate_random_polynomial_ring(deg_bound_d: usize) -> PolynomialRing {
     let mut rng = rand::thread_rng();
     PolynomialRing {
-        // todo: since h_ij calculation includes 1/2, we need to make sure the coefficients are divisible by 2. any other way???
-        coefficients: (0..deg_bound_d).map(|_| Zq::from(rng.gen_range(1..5) * 2)).collect(),
+        coefficients: (0..deg_bound_d).map(|_| Zq::from(rng.gen_range(1..5))).collect(),
     }
 }
 
@@ -361,9 +360,7 @@ fn compute_aggr_ct_constraint_phi(
                 let omega = omega[k][j];
                 pai[i][j].chunks(deg_bound_d.value()).take(size_n.value()).map(|chunk| {
                     let pai_poly = PolynomialRing { coefficients: chunk.to_vec() };
-                    let mut pai_poly_ca = conjugation_automorphism(&pai_poly);
-                    // todo: add this will pass the test, why???
-                    pai_poly_ca = PolynomialRing { coefficients: pai_poly_ca.coefficients[0..pai_poly_ca.coefficients.len()-10].to_vec() };
+                    let pai_poly_ca = conjugation_automorphism(&pai_poly);
                     pai_poly_ca * omega
                 }).collect::<Vec<PolynomialRing>>()
             }).fold(
@@ -510,7 +507,7 @@ fn zero_poly() -> PolynomialRing {
     PolynomialRing { coefficients: vec![Zq::from(0); 1] }
 }
 
-fn check_aggr_relation(a_aggr: &Vec<Vec<PolynomialRing>>, b_aggr: PolynomialRing, g: &Vec<Vec<PolynomialRing>>, h: &Vec<Vec<PolynomialRing>>) {
+fn check_aggr_relation(a_aggr: &Vec<Vec<PolynomialRing>>, b_aggr: &PolynomialRing, g: &Vec<Vec<PolynomialRing>>, h: &Vec<Vec<PolynomialRing>>) {
     let size_r = Zq::from(a_aggr.len());
     // 7. check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
     // 7.1 calculate sum(a_ij * g_ij)
@@ -521,8 +518,12 @@ fn check_aggr_relation(a_aggr: &Vec<Vec<PolynomialRing>>, b_aggr: PolynomialRing
     // 7.2 calculate sum(h_ii)
     let sum_h_ii = (0..size_r.value()).fold(zero_poly(), |acc, i| acc + &h[i][i]);
 
+    // 2 times sum
+    let b_aggr2 = b_aggr * Zq::from(2);
+    let sum_a_ij_g_ij2 = sum_a_ij_g_ij * Zq::from(2);
+
     // 7.3 check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
-    assert_eq!(sum_a_ij_g_ij + sum_h_ii, b_aggr);
+    assert_eq!(sum_a_ij_g_ij2 + sum_h_ii, b_aggr2);
 }
 
 // 2.3 calculate u1
@@ -993,8 +994,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
         let inner_product_omega_k_p = inner_product_zq_vector(&omega_k, &p);
         // add them together
         b_k_0_computed += inner_product_omega_k_p;
-        // todo: bring back this assert
-        // assert_eq!(b_k_0_from_poly, b_k_0_computed);
+        assert_eq!(b_k_0_from_poly, b_k_0_computed);
     }
 
     // ================================================
@@ -1026,9 +1026,10 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
             let phi_j = &phi_aggr[j];
             let s_i = &witness_s[i];
             let s_j = &witness_s[j];
-            // todo: what if inner_product_ij is not divisible by 2???
             let inner_product_ij = inner_product_polynomial_ring_vector(&phi_i, &s_j) + inner_product_polynomial_ring_vector(&phi_j, &s_i);
-            inner_product_ij / Zq::from(2)
+            // todo: why this is not working???
+            // inner_product_ij / Zq::from(2)
+            inner_product_ij
         }).collect::<Vec<PolynomialRing>>()
     }).collect();
     assert_eq!(h.len(), size_r.value());
@@ -1094,7 +1095,7 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
         }
     }
 
-    assert_eq!(sum_phi_i_z_c_i, sum_h_ij_c_i_c_j);
+    assert_eq!(sum_phi_i_z_c_i * Zq::from(2), sum_h_ij_c_i_c_j);
     println!("Prover: Send amortized proof");
     println!("Prover is finished");
     let st = St {
@@ -1290,11 +1291,11 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
             sum_h_ij_c_i_c_j = sum_h_ij_c_i_c_j + (&h[i][j] * &c[i] * &c[j]);
         }
     }
-    assert_eq!(sum_phi_i_z_c_i, sum_h_ij_c_i_c_j);
+    assert_eq!(sum_phi_i_z_c_i * Zq::from(2), sum_h_ij_c_i_c_j);
 
     println!("Verifier: Compute aggregated relation");
     // 7. check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
-    check_aggr_relation(&a_aggr, b_aggr, &g, &h);
+    check_aggr_relation(&a_aggr, &b_aggr, &g, &h);
 
     println!("Verifier: Check opening of outer commitments(todo)");
     // 8. check if u1 is valid
@@ -1382,9 +1383,8 @@ mod tests {
                 let phi_j = &phi_aggr[j];
                 let s_i = &witness_s[i];
                 let s_j = &witness_s[j];
-                // todo: what if inner_product_ij is not divisible by 2???
                 let inner_product_ij = inner_product_polynomial_ring_vector(&phi_i, &s_j) + inner_product_polynomial_ring_vector(&phi_j, &s_i);
-                inner_product_ij / Zq::from(2)
+                inner_product_ij
             }).collect::<Vec<PolynomialRing>>()
         }).collect();
 
@@ -1408,7 +1408,7 @@ mod tests {
             }
         }
 
-        assert_eq!(sum_phi_i_z_c_i, sum_h_ij_c_i_c_j);
+        assert_eq!(sum_phi_i_z_c_i * Zq::from(2), sum_h_ij_c_i_c_j);
     }
 
     #[test]
@@ -1585,13 +1585,12 @@ mod tests {
                 let phi_j = &phi_aggr[j];
                 let s_i = &witness_s[i];
                 let s_j = &witness_s[j];
-                // todo: what if inner_product_ij is not divisible by 2???
                 let inner_product_ij = inner_product_polynomial_ring_vector(&phi_i, &s_j) + inner_product_polynomial_ring_vector(&phi_j, &s_i);
-                inner_product_ij / Zq::from(2)
+                inner_product_ij
             }).collect::<Vec<PolynomialRing>>()
         }).collect();
 
-        check_aggr_relation(&a_aggr, b_aggr, &g, &h);
+        check_aggr_relation(&a_aggr, &b_aggr, &g, &h);
     }
 
     #[test]
@@ -1618,7 +1617,8 @@ mod tests {
         // generate size_r * size_n phi_aggr
         let phi_aggr: Vec<Vec<PolynomialRing>> = (0..size_r.value()).map(|i| {
             (0..size_n.value()).map(|j| {
-                generate_random_polynomial_ring(deg_bound_d.value())
+                // generate_random_polynomial_ring(deg_bound_d.value())
+                generate_random_polynomial_ring(64)
             }).collect::<Vec<PolynomialRing>>()
         }).collect();
 
@@ -1639,13 +1639,59 @@ mod tests {
                 let phi_j = &phi_aggr[j];
                 let s_i = &witness_s[i];
                 let s_j = &witness_s[j];
-                // todo: what if inner_product_ij is not divisible by 2???
                 let inner_product_ij = inner_product_polynomial_ring_vector(&phi_i, &s_j) + inner_product_polynomial_ring_vector(&phi_j, &s_i);
-                inner_product_ij / Zq::from(2)
+                // todo: why this is not working???
+                // inner_product_ij / Zq::from(2)
+                inner_product_ij
             }).collect::<Vec<PolynomialRing>>()
         }).collect();
 
-        check_aggr_relation(&a_aggr, b_aggr, &g, &h);
+        // Calculate b^(k)
+        let mut quad_sum = zero_poly();
+        let mut linear_sum = zero_poly();
+        for i in 0..size_r.value() {
+            for j in 0..size_r.value() {
+                // calculate inner product of s[i] and s[j], will return a single PolynomialRing
+                let elem_s_i = &witness_s[i];
+                let elem_s_j = &witness_s[j];
+                // Calculate inner product and update b
+                let inner_product_si_sj = inner_product_polynomial_ring_vector(&elem_s_i, &elem_s_j);
+                let a_constr = &a_aggr[i][j];
+                quad_sum = quad_sum + (inner_product_si_sj * a_constr);
+            }
+            // calculate inner product of s[i] and phi
+            let inner_product_si_phi = inner_product_polynomial_ring_vector(&witness_s[i], &phi_aggr[i]);
+            println!("inner_product_si_phi: {:?}", inner_product_si_phi);
+            println!("h[i][i]: {:?}", h[i][i]);
+            assert_eq!(&inner_product_si_phi * Zq::from(2), h[i][i]);
+            linear_sum = linear_sum + inner_product_si_phi;
+        }
+
+        // use function to check
+        check_aggr_relation(&a_aggr, &b_aggr, &g, &h);
+
+        // ================================================
+        // manually check
+
+        // 7. check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
+        // 7.1 calculate sum(a_ij * g_ij)
+        let sum_a_ij_g_ij = a_aggr.iter().zip(g.iter()).map(|(a_i, g_i)| {
+            a_i.iter().zip(g_i.iter()).map(|(a_ij, g_ij)| a_ij * g_ij).fold(zero_poly(), |acc, val| acc + val)
+        }).fold(zero_poly(), |acc, val| acc + val);
+
+        // 7.2 calculate sum(h_ii)
+        let sum_h_ii = (0..size_r.value()).fold(zero_poly(), |acc, i| acc + &h[i][i]);
+
+        // 2 times sum
+        let quad_sum2 = quad_sum * Zq::from(2);
+        let linear_sum2 = linear_sum * Zq::from(2);
+        let b_aggr2 = &b_aggr * Zq::from(2);
+        let sum_a_ij_g_ij2 = sum_a_ij_g_ij * Zq::from(2);
+        assert_eq!(linear_sum2, sum_h_ii);
+        assert_eq!(quad_sum2, sum_a_ij_g_ij2);
+        assert_eq!(quad_sum2 + linear_sum2, b_aggr2);
+        // 7.3 check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
+        assert_eq!(sum_a_ij_g_ij2 + sum_h_ii, b_aggr2);
     }
 
     #[test]
