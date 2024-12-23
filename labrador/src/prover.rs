@@ -1413,7 +1413,7 @@ mod tests {
     }
 
     #[test]
-    fn test_aggr_relation0() {
+    fn test_aggr_relation_full_example() {
         let size_r = Zq::new(3); // r: Number of witness elements
         let size_n = Zq::new(5); // n
         let deg_bound_d = Zq::new(8); // random polynomial degree bound
