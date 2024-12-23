@@ -306,6 +306,8 @@ impl Div for Zq {
     type Output = Zq;
 
     fn div(self, other: Zq) -> Zq {
+        // todo: add this check?
+        // assert_eq!(self.value() % other.value(), 0, "Division should be divisible by other");
         Zq::new(self.value() / other.value())
     }
 }
