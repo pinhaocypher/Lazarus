@@ -1800,32 +1800,11 @@ mod tests {
         let r = 3;
         let n = 4;
 
-        let s: Vec<Vec<PolynomialRing>> = vec![
-            vec![
-                PolynomialRing {
-                    coefficients: vec![Zq::from(1), Zq::from(2), Zq::from(3)],
-                },
-                PolynomialRing {
-                    coefficients: vec![Zq::from(4), Zq::from(5), Zq::from(6)],
-                },
-            ],
-            vec![
-                PolynomialRing {
-                    coefficients: vec![Zq::from(7), Zq::from(8), Zq::from(9)],
-                },
-                PolynomialRing {
-                    coefficients: vec![Zq::from(10), Zq::from(11), Zq::from(12)],
-                },
-            ],
-            vec![
-                PolynomialRing {
-                    coefficients: vec![Zq::from(13), Zq::from(14), Zq::from(15)],
-                },
-                PolynomialRing {
-                    coefficients: vec![Zq::from(16), Zq::from(17), Zq::from(18)],
-                },
-            ],
-        ];
+        let s: Vec<Vec<PolynomialRing>> = (0..r).map(|_| {
+            (0..n).map(|n_i| PolynomialRing {
+                coefficients: vec![Zq::from(n_i)],
+            }).collect()
+        }).collect();
 
         let a_constraint: Vec<Vec<PolynomialRing>> = (0..r).map(|_| {
             (0..r).map(|r_i| PolynomialRing {
