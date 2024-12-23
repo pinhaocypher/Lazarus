@@ -1098,8 +1098,6 @@ pub fn prove(a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_matrix: &Vec<
     assert_eq!(sum_phi_i_z_c_i, sum_h_ij_c_i_c_j);
     println!("Prover: Send amortized proof");
     println!("Prover is finished");
-    // Send u2 to verifier
-    // transcript.add(u2)
     let st = St {
         a_constraint,
         phi_constraint,
