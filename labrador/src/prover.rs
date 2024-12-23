@@ -155,6 +155,7 @@ fn generate_gaussian_distribution(nd: Zq) -> Vec<Vec<Zq>> {
 
 // Conjugation Automorphism σ_{-1}
 // for polynomial ring a = 1+2x+3x^2, since x^64 = -1, apply this method to a, will get 1+2*(Zq.modulus()-1) * x^(64-1) +3*(Zq.modulus()-1) * x^(64-2)
+//todo: Aut(Rq) ∼= Z×2d what is this???
 fn conjugation_automorphism(poly: &PolynomialRing) -> PolynomialRing {
     let modulus_minus_one = Zq::from(Zq::modulus() - 1);
     let transformed_coeffs: Vec<Zq> = (0..PolynomialRing::DEGREE_BOUND)

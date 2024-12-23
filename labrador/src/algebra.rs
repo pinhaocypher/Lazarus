@@ -263,6 +263,7 @@ pub struct Zq {
 }
 
 impl Zq {
+    // todo: use symmetric from -Q/2 to Q/2
     pub const Q: usize = 2usize.pow(32);
 
     pub fn modulus() -> usize {
