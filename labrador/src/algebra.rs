@@ -511,4 +511,16 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_polynomial_ring_division() {
+        let poly = PolynomialRing {
+            coefficients: vec![Zq::new(4), Zq::new(8), Zq::new(12)],
+        };
+        let divisor = Zq::new(2);
+        let result = poly / divisor;
+        let expected = PolynomialRing {
+            coefficients: vec![Zq::new(2), Zq::new(4), Zq::new(6)],
+        };
+        assert_eq!(result, expected);
+    }
 }
