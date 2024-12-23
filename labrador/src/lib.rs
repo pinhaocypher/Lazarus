@@ -1,4 +1,4 @@
-pub mod setup;
-pub mod prover;
-pub mod verifier;
 pub mod algebra;
+pub mod prover;
+pub mod setup;
+pub mod verifier;

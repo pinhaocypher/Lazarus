@@ -1,14 +1,13 @@
-
-use std::ops::Mul;
-use std::ops::Add;
-use std::ops::Sub;
-use std::ops::Div;
-use std::ops::Rem;
+use rand::Rng;
+use std::cmp::PartialEq;
 use std::fmt::Display;
 use std::iter::Sum;
+use std::ops::Add;
 use std::ops::AddAssign;
-use std::cmp::PartialEq;
-use rand::Rng;
+use std::ops::Div;
+use std::ops::Mul;
+use std::ops::Rem;
+use std::ops::Sub;
 
 #[derive(Debug, Clone)]
 pub struct PolynomialRing {
@@ -20,8 +19,13 @@ impl PolynomialRing {
 
     pub fn new(coefficients: Vec<Zq>) -> Self {
         // Ensure coefficients are in Zq and degree is less than 64
-        assert!(coefficients.len() <= Self::DEGREE_BOUND, "Polynomial degree must be less than 64");
-        PolynomialRing { coefficients: coefficients.clone() }
+        assert!(
+            coefficients.len() <= Self::DEGREE_BOUND,
+            "Polynomial degree must be less than 64"
+        );
+        PolynomialRing {
+            coefficients: coefficients.clone(),
+        }
     }
     // Multiply two polynomials in Rq = Zq[X]/(X^64 + 1)
     fn multiply_by_polynomial_ring(&self, other: &PolynomialRing) -> PolynomialRing {
@@ -109,11 +113,7 @@ impl Mul<Zq> for PolynomialRing {
     type Output = PolynomialRing;
 
     fn mul(self, other: Zq) -> PolynomialRing {
-        let new_coefficients = self
-            .coefficients
-            .iter()
-            .map(|c| *c * other)
-            .collect();
+        let new_coefficients = self.coefficients.iter().map(|c| *c * other).collect();
         PolynomialRing {
             coefficients: new_coefficients,
         }
@@ -124,11 +124,7 @@ impl Mul<Zq> for &PolynomialRing {
     type Output = PolynomialRing;
 
     fn mul(self, other: Zq) -> PolynomialRing {
-        let new_coefficients = self
-            .coefficients
-            .iter()
-            .map(|c| *c * other)
-            .collect();
+        let new_coefficients = self.coefficients.iter().map(|c| *c * other).collect();
         PolynomialRing {
             coefficients: new_coefficients,
         }
@@ -249,8 +245,18 @@ impl Add<&Zq> for &PolynomialRing {
 impl PartialEq for PolynomialRing {
     fn eq(&self, other: &Self) -> bool {
         // Compare coefficients, ignoring trailing zeros
-        let self_coeffs = self.coefficients.iter().rev().skip_while(|&&x| x == Zq::from(0)).collect::<Vec<_>>();
-        let other_coeffs = other.coefficients.iter().rev().skip_while(|&&x| x == Zq::from(0)).collect::<Vec<_>>();
+        let self_coeffs = self
+            .coefficients
+            .iter()
+            .rev()
+            .skip_while(|&&x| x == Zq::from(0))
+            .collect::<Vec<_>>();
+        let other_coeffs = other
+            .coefficients
+            .iter()
+            .rev()
+            .skip_while(|&&x| x == Zq::from(0))
+            .collect::<Vec<_>>();
 
         self_coeffs == other_coeffs
     }
@@ -269,7 +275,9 @@ impl Zq {
         Self::Q
     }
     pub fn new(value: usize) -> Self {
-        Zq { value: value % Self::Q }
+        Zq {
+            value: value % Self::Q,
+        }
     }
 
     pub fn value(&self) -> usize {
@@ -323,7 +331,6 @@ impl AddAssign for Zq {
     }
 }
 
-
 impl Sub for Zq {
     type Output = Zq;
 
@@ -351,7 +358,6 @@ impl Sum for Zq {
         iter.fold(Zq::new(0), |acc, x| acc + x)
     }
 }
-
 
 #[derive(Debug)]
 pub struct RqMatrix {

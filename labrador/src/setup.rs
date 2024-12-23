@@ -64,8 +64,13 @@ pub fn setup(
     kappa: Zq,
     kappa1: Zq,
     kappa2: Zq,
-) -> (RqMatrix, Vec<Vec<RqMatrix>>, Vec<Vec<Vec<RqMatrix>>>, Vec<Vec<Vec<RqMatrix>>>) {
-  setup_matrices(kappa, size_n, size_r, t1, t2, kappa1, kappa2)
+) -> (
+    RqMatrix,
+    Vec<Vec<RqMatrix>>,
+    Vec<Vec<Vec<RqMatrix>>>,
+    Vec<Vec<Vec<RqMatrix>>>,
+) {
+    setup_matrices(kappa, size_n, size_r, t1, t2, kappa1, kappa2)
     // 0. setup
     // public parameters after setup: [a_ij^(k), a_ij^(l), phi^(k), phi^(l), b^(k), b0(l)']
 
