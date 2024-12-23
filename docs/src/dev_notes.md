@@ -8,7 +8,7 @@
 			- $\vec{s}$ is witness
 			- $\sum_{i=1}^r||\vec{s_i}||_2^2 \le \beta^2$
 	- data structure (page 10)
-		- $\vec{s_i}$, $\vec{s_j}$ $\in R_q^{n}$ 
+		- $\vec{s_i}$, $\vec{s_j}$ $\in R_q^{n}$
 		- $\vec{\varphi}_i^{(k)}$ $\in R_q^{n}$
 		- $a_{ij}^{(k)}$ $\in R_q$
 		- $b^{(k)}$ $\in R_q$
@@ -59,10 +59,10 @@
 	- $\vec{t_i} = A\vec{s_i} \in R_q^{\kappa}$, this is Ajtai commitment
 - decompose and combine
 	- problems
-		- problem 1: 
+		- problem 1:
 			- costly to send $t_i$ directly to verifier
 			- solution: combine all inner commitments $\vec{t_i}$ into a shorter outer commitment
-		- problem 2: 
+		- problem 2:
 			- ring elements $\vec{t}_{i, j}, g_{i, j} \in R_q$ have arbitrary length of  coefficients, not good for commitment
 			- solution: decompose and concatenate
 				- each coefficient of ring element need to be decomposed to same length with a proper basis, then concatenate them together
@@ -79,13 +79,13 @@
 			- in total there are $(r^2+r)/2$ $R_q$ in $\vec{g}$ , means $\vec{g} \in R_q^{(r^2+r)/2}$
 			- choose length $t_2$, basis $b_2$
 			- decompose $\vec{g}_{k}$, which $k \in [(r^2+r)/2]$, output decomposed  $\vec{g}_{k} = \vec{g}_{k}^{(0)} + ... + \vec{g}_{g}^{(t_2 - 1)}b_2^{t_2 - 1} \in R_q^{t_2}$
-			- concatenate all decomposed  $\vec{g}_{k}$, get decomposed $\vec{g} \in R_q^{t_2 (r^2+r)/2}$	
+			- concatenate all decomposed  $\vec{g}_{k}$, get decomposed $\vec{g} \in R_q^{t_2 (r^2+r)/2}$
 		- decomposition params(page 16, 19)
 			- $\tau$: variance for the sum of the coefficients of a challenge polynomial
-			- $\mathfrak{s} = \beta / \sqrt{r n d}$ : standard deviation for the $Z_q$ coefficients of the vectors $\vec{s}_i$ 
+			- $\mathfrak{s} = \beta / \sqrt{r n d}$ : standard deviation for the $Z_q$ coefficients of the vectors $\vec{s}_i$
 			- $b \approx b_1 \approx b_2 = \sqrt{\sqrt{12 r \tau \mathfrak{s}}}$ , b is used in recurse section
-			- $t_1 = \lfloor \frac{\log q}{\log b} \rceil$ 
-			- $t_2 = \lfloor \frac{\log{(\sqrt{24 n d \mathfrak{s^2}})}}{\log b} \rceil$ 
+			- $t_1 = \lfloor \frac{\log q}{\log b} \rceil$
+			- $t_2 = \lfloor \frac{\log{(\sqrt{24 n d \mathfrak{s^2}})}}{\log b} \rceil$
 	- combine
 		- combine all inner commitments $\vec{t_i}$ with random matrix B to get a shooter outer commitment $\vec{u_1} = B\vec{t} \in R_q^{\kappa_1}$
 		- also put $g_{ij} \in R_q$ combination here, because $g_{ij}$ is dependent of all the challenges, so compute it in the very beginning of the protocol
@@ -104,7 +104,7 @@
 		- $\vec{u_1} = B\vec{t} + C\vec{g} \in R_q^{\kappa_1}$
 
 ## 2. project
-- goal: norm check can be replaced by Johnson-Lindenstrauss projection. 
+- goal: norm check can be replaced by Johnson-Lindenstrauss projection.
 - why: because the JL proof is more compact than check the long vector $\vec{s}$
 - need to reach a security level $\lambda(\lambda = 128)$
 - steps
@@ -134,7 +134,7 @@
 	- d: $Z_q$, degree of $\vec{s_i}$
 	- $1 \le i \le r$
 	- $j = 1, . . . , 2λ$
-	- $\prod_i \in \{-1, 0, 1\}^{2\lambda \times nd}$ 
+	- $\prod_i \in \{-1, 0, 1\}^{2\lambda \times nd}$
 	- $\pi_i^{(j)}$: $\in \{-1, 0, 1\}^{nd}$
 	- $p_j \in Z_q$
 	- $\vec{p} \in Z_q^{2\lambda}$
@@ -165,9 +165,9 @@
 				- $b_0^{''(k)} = \sum_{l=1}^{|L|}\vec{\psi}_l^{(k)}b_0'^{(l)} + <\vec{\omega}^{(k)}, \vec{p}>$
 	- 2. aggregate linear constraints $f^{(k)}(k = 1,..., |F|)$ and $f^{''(k)}(k = 1,..., \lceil \lambda/log_2(q) \rceil)$
 		- verifier sends random samples from challenge space: $\vec{\alpha} \xleftarrow{\$} R_q^{|F|}$, $\vec{\beta}  \xleftarrow{\$} R_q^{\lceil \lambda/log_2(q) \rceil}, K = |F|$
-		- $F = <\vec{\alpha}, f> + <\vec{\beta}, f''>$ 
-		- $F(\vec{s_1}, ..., \vec{s_r})$ 
-			- $= \sum_{k=1}^K \vec{\alpha}_k f^{(k)} + \sum_{k=1}^{\lceil \lambda/log_2(q) \rceil} \vec{\beta}_k f^{''(k)}$ 
+		- $F = <\vec{\alpha}, f> + <\vec{\beta}, f''>$
+		- $F(\vec{s_1}, ..., \vec{s_r})$
+			- $= \sum_{k=1}^K \vec{\alpha}_k f^{(k)} + \sum_{k=1}^{\lceil \lambda/log_2(q) \rceil} \vec{\beta}_k f^{''(k)}$
 			- $=\sum_{i,j=1}^r a_{i,j}<\vec{s}_i, \vec{s}_j> + \sum_{i=1}^r <\varphi_{i}, \vec{s}_i> - b$
 		- compute outer commitment $\vec{u}_2$
 			- $\vec{\varphi}_i = \sum_{k=1}^K \vec{\alpha}_k \varphi_{i}^{(k)} + \sum_{k=1}^{\lceil \lambda/log_2(q) \rceil} \vec{\beta}_k \varphi_{i}^{''(k)}$
@@ -205,7 +205,7 @@
 ## 5. verifier checks(without recursion)
 - $\kappa + \kappa_1 + \kappa_2 + 3$ dot product constraints
 	- 3 dot product constraints check
-		- (1) $<\vec{z}, \vec{z}> = \sum_{i,j=1}^{r} g_{i,j} c_i c_j$ 
+		- (1) $<\vec{z}, \vec{z}> = \sum_{i,j=1}^{r} g_{i,j} c_i c_j$
 		- (2) $\sum_{i=1}^r <\vec{\varphi}_i, \vec{z}> c_i =\sum_{i,j=1}^{r} h_{i,j} c_i c_j$
 		- (3) $\sum_{i,j=1}^{r} a_{i,j} g_{i,j} + \sum_{i=1}^{r} h_{i,i} - b = 0$
 	- $\kappa + \kappa_1 + \kappa_2$ dot product constraints check
@@ -220,9 +220,9 @@
 	- $\gamma, \gamma_1, \gamma_2, \beta'$ see page 19
 
 ## 6. recurse
-- goal: prove the last message ($\vec{z}, \vec{t}, \vec{g}, \vec{h}$) of each iteration with base protocol recursively until get shooter witness and proof, then output the last message  ($\vec{z}, \vec{t}, \vec{g}, \vec{h}$) 
-- steps: 
-	- 1. convert last message to new witness vector $\vec{s}_i^\prime$ , $i \in [r']$ 
+- goal: prove the last message ($\vec{z}, \vec{t}, \vec{g}, \vec{h}$) of each iteration with base protocol recursively until get shooter witness and proof, then output the last message  ($\vec{z}, \vec{t}, \vec{g}, \vec{h}$)
+- steps:
+	- 1. convert last message to new witness vector $\vec{s}_i^\prime$ , $i \in [r']$
 		- decompose $\vec{z}$
 			- $\vec{z} = \vec{z}^{(0)} + b\vec{z}^{(1)}$ , $\vec{z}^{(0)}, \vec{z}^{(1)} \in R_q^n$
 		- combine $\vec{t}, \vec{g}, \vec{h}$
@@ -231,17 +231,17 @@
 		- compose $\vec{s}_i^\prime$
 			- choose $\nu, \mu$ how to choose??
 			- $\vec{s}_i^\prime$ part 1:
-				- $\vec{z}^{(0)} = \vec{s}_1^\prime ||... || \vec{s}_{\nu}^\prime$ 
-				- $\vec{s}_i^\prime$ $\in R_q^{\lceil n/\nu \rceil}$ 
+				- $\vec{z}^{(0)} = \vec{s}_1^\prime ||... || \vec{s}_{\nu}^\prime$
+				- $\vec{s}_i^\prime$ $\in R_q^{\lceil n/\nu \rceil}$
 			- $\vec{s}_i^\prime$ part 2:
 				- $\vec{z}^{(1)} = \vec{s}_{\nu+1}^\prime ||... || \vec{s}_{2\nu}^\prime$
-				- $\vec{s}_i^\prime$ $\in R_q^{\lceil n/\nu \rceil}$ 
+				- $\vec{s}_i^\prime$ $\in R_q^{\lceil n/\nu \rceil}$
 			- $\vec{s}_i^\prime$ part 3:
-				- $\vec{v} = \vec{s}_{2\nu+1}^\prime ||... || \vec{s}_{2\nu + \mu}^\prime$ 
-				- $\vec{s}_i^\prime$ $\in R_q^{\lceil m/\mu \rceil}$ 
+				- $\vec{v} = \vec{s}_{2\nu+1}^\prime ||... || \vec{s}_{2\nu + \mu}^\prime$
+				- $\vec{s}_i^\prime$ $\in R_q^{\lceil m/\mu \rceil}$
 	- 2. use base protocol to prove the new witness
 		- get new relation $g^{(k)}(\vec{s_1}, ..., \vec{s_{r'}})$  $=\sum_{i,j=1}^{r'} a_{i,j}^{(k)}<\vec{s}_i, \vec{s}_j> + \sum_{i=1}^{r'} <\varphi_{i}^{(k)}, \vec{s}_i> - b^{(k)} = 0$
-		- $k = 1, ..., \kappa + \kappa_1 + \kappa_2 + 3$ 
+		- $k = 1, ..., \kappa + \kappa_1 + \kappa_2 + 3$
 		- $a_{ij}$ value refer page 15
 	- 3. keep recursing, until proof is small enough
 		- need O(log log n) iterations
@@ -251,11 +251,11 @@
 		- verifier checks(without recursion)
 - data structure
 	- $\vec{z}^{(0)}, \vec{z}^{(1)} \in R_q^n$
-	- $\vec{z}^{(0)} || \vec{z}^{(1)} \in R_q^{2n}$ 
+	- $\vec{z}^{(0)} || \vec{z}^{(1)} \in R_q^{2n}$
 	- $\vec{v}$ $\in R_q^m$
 - params
-	- $2n \approx m$ 
+	- $2n \approx m$
 	- $\gamma, \gamma_1, \gamma_2, \beta'$ (page 19)
-	- $\frac{n}{\nu} \approx \frac{m}{\mu}$ 
+	- $\frac{n}{\nu} \approx \frac{m}{\mu}$
 	- $r' = 2\nu + \mu = O(r^{1/3})$ is optimal(page 5)
 
