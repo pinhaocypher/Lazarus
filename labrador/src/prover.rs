@@ -1299,7 +1299,28 @@ fn verify(st: St, tr: Tr, a_matrix: &RqMatrix, b_matrix: &Vec<Vec<RqMatrix>>, c_
 
     println!("Verifier: Check opening of outer commitments(todo)");
     // 8. check if u1 is valid
+    let u1_check = calculate_outer_comm_u1(
+        &b_matrix,
+        &c_matrix,
+        &g_matrix_aggregated,
+        &all_t_i_basis_form_aggregated,
+        kappa1,
+        t1,
+        t2,
+        size_r,
+        size_n
+    );
+    assert_eq!(u1, u1_check);
     // 9. check if u2 is valid
+    let u2_check = calculate_outer_comm_u2(&d_matrix,
+        &h_gar_poly_basis_form_aggregated,
+        t2,
+        kappa2,
+        size_r,
+        size_n,
+        deg_bound_d
+    );
+    assert_eq!(u2, u2_check);
 
 }
 
