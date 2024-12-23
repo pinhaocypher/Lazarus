@@ -1,12 +1,13 @@
 ## 0. setup
 - relation R
+	- In DPCS(dot product constraint system), there are k constraints, each constraint has a, phi and b
 	- constraints
-		- $f^{(k)}(\vec{s_1}, ..., \vec{s_{r}})$  $=\sum_{i,j=1}^{r'} a_{i,j}^{(k)}<\vec{s}_i, \vec{s}_j> + \sum_{i=1}^{r} <\varphi_{i}^{(k)}, \vec{s}_i> - b^{(k)} = 0$
+		- $f^{(k)}(\vec{s_1}, ..., \vec{s_{r}})$  $=\sum_{i,j=1}^{r} a_{i,j}^{(k)}<\vec{s}_i, \vec{s}_j> + \sum_{i=1}^{r} <\varphi_{i}^{(k)}, \vec{s}_i> - b^{(k)} = 0$
 		- $ct(f'^{(l)}(\vec{s_1}, ..., \vec{s_{l}}))$  $=ct(\sum_{i,j=1}^{L} a_{i,j}^{(k)}<\vec{s}_i, \vec{s}_j> + \sum_{i=1}^{L} <\varphi_{i}^{(l)}, \vec{s}_i> - b^{(l)}) \mod q'$
 		- norm check
 			- $\vec{s}$ is witness
 			- $\sum_{i=1}^r||\vec{s_i}||_2^2 \le \beta^2$
-	- data structure
+	- data structure (page 10)
 		- $\vec{s_i}$, $\vec{s_j}$ $\in R_q^{n}$
 		- $\vec{\varphi}_i^{(k)}$ $\in R_q^{n}$
 		- $a_{ij}^{(k)}$ $\in R_q$
@@ -45,7 +46,7 @@
 			- $1 \le i \le j \le r$
 			- $0 \le k \le t_2 - 1$
 			- $t_2$ see below decomposition section
-			- $\kappa_2$ ??
+			- $\kappa_2$??
 		- $D_{ijk} \in R_q^{\kappa_2 \times 1}$
 			- $1 \le i \le j \le r$
 			- $0 \le k \le t_1 - 1$
@@ -117,6 +118,7 @@
 			- 1: 1/4
 	- prover calculate $p_j$
 		- $p_j =\sum_{i=1}^r<\pi_i^{(j)}, \vec{s_i}>$ $\in Z_q$, $j = 1, . . . , 2λ$
+		- $\vec{\pi}_i^{(j)}$ is the j-th row of $\prod_i$
 	- prover sends $\vec{p} \in Z_q^{2\lambda}$
 	- verifier check $||\vec{p}||_2 \le \sqrt{\lambda}\beta$ instead of $\sum_{i=1}^r||\vec{s_i}||_2^2 \le \beta^2$
 	- notes: greyhound only use {1, -1} to do the sample
@@ -153,13 +155,14 @@
 					- $+ \sum_{j=1}^{2\lambda}\vec{\omega}_j^{(k)}(\sum_{i=1}^r<\sigma_{-1}(\vec{\pi_i}^{(j)}), \vec{s}_i> - p_j)$
 					- $=\sum_{i,j=1}^r a_{i,j}^{''(k)}<\vec{s}_i, \vec{s}_j> + \sum_{i=1}^r <\varphi_{i}^{''(k)}, \vec{s}_i> - b_0^{''(k)}$
 				- so prover gets:
-					- $a_{i,j}^{''(k)} = \sum_{l=1}^{|L|}\vec{\psi}_l^{(k)}a_{i,j}^{'(l)}$
-					- $\varphi_{i}^{''(k)} = \sum_{l=1}^{|L|}\vec{\psi}_l^{(k)}\varphi_{i}^{'(l)} +  \sum_{j=1}^{2\lambda}\vec{\omega}_j^{(k)}\sigma_{-1}(\vec{\pi_i}^{(j)})$
-					- $b^{''(k)} = \sum_{i,j=1}^r a_{i,j}^{''(k)}<\vec{s}_i, \vec{s}_j> + \sum_{i=1}^r <\varphi_{i}^{''(k)}, \vec{s}_i>$
+					- $a_{i,j}^{''(k)} = \sum_{l=1}^{|L|}\vec{\psi}_l^{(k)}a_{i,j}^{'(l)}$ $\in R_q$
+					- $\varphi_{i}^{''(k)} = \sum_{l=1}^{|L|}\vec{\psi}_l^{(k)}\varphi_{i}^{'(l)} +  \sum_{j=1}^{2\lambda}\vec{\omega}_j^{(k)}\sigma_{-1}(\vec{\pi_i}^{(j)})$ $\in R_q^n$
+					- $b_0^{''(k)} = \sum_{l=1}^{|L|}\vec{\psi}_l^{(k)}b_0'^{(l)} + <\vec{\omega}^{(k)}, \vec{p}>$
 			- extends integers $b_0^{''(k)}$ to full polynomials such that $f^{''(k)}(\vec{s_1}, ..., \vec{s_r}) = 0$
-			- prover sends $b_0^{''(k)}$ to verifier
-			- verifier checks the constant term
-				- $b_0^{''(k)} = \sum_{l=1}^{|L|}\vec{\psi}_l^{(k)}b_0^{(l)} + <\vec{\omega}^{(k)}, \vec{p}>$
+				- $b^{''(k)} = \sum_{i,j=1}^r a_{i,j}^{''(k)}<\vec{s}_i, \vec{s}_j> + \sum_{i=1}^r <\varphi_{i}^{''(k)}, \vec{s}_i>$
+			- prover sends $b^{''(k)}$ to verifier
+			- verifier checks the constant term of $b^{''(k)}$
+				- $b_0^{''(k)} = \sum_{l=1}^{|L|}\vec{\psi}_l^{(k)}b_0'^{(l)} + <\vec{\omega}^{(k)}, \vec{p}>$
 	- 2. aggregate linear constraints $f^{(k)}(k = 1,..., |F|)$ and $f^{''(k)}(k = 1,..., \lceil \lambda/log_2(q) \rceil)$
 		- verifier sends random samples from challenge space: $\vec{\alpha} \xleftarrow{\$} R_q^{|F|}$, $\vec{\beta}  \xleftarrow{\$} R_q^{\lceil \lambda/log_2(q) \rceil}, K = |F|$
 		- $F = <\vec{\alpha}, f> + <\vec{\beta}, f''>$
@@ -193,6 +196,7 @@
 	- verifier sends challenge $c_i$ $\in R_q$ from challenge space
 	- prover calculates $\vec{z}, \vec{h}$
 		- $\vec{z} = \sum_{i=1}^{r} c_i \vec{s}_i$
+			- $c_i \vec{s}_i$: multiply $c_i$ by each element of $\vec{s}_i$ then get a new vector
 	- provers sends $\vec{z}, \vec{t}, \vec{g}, \vec{h}$
 - data structure
 	-  $c_i$ $\in R_q$
@@ -254,7 +258,4 @@
 	- $\gamma, \gamma_1, \gamma_2, \beta'$ (page 19)
 	- $\frac{n}{\nu} \approx \frac{m}{\mu}$
 	- $r' = 2\nu + \mu = O(r^{1/3})$ is optimal(page 5)
-
-
-
 
