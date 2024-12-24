@@ -26,6 +26,8 @@ impl PolynomialRing {
             coefficients: coefficients.clone(),
         }
     }
+
+    // todo: use NTT to speed up
     // Multiply two polynomials in R = Zq[X]/(X^64 + 1)
     fn multiply_by_polynomial_ring(&self, other: &PolynomialRing) -> PolynomialRing {
         // Initialize a vector to hold the intermediate multiplication result
