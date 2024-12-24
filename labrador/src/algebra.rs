@@ -129,28 +129,6 @@ impl Mul<Zq> for &PolynomialRing {
     }
 }
 
-impl Div<Zq> for PolynomialRing {
-    type Output = PolynomialRing;
-
-    fn div(self, other: Zq) -> PolynomialRing {
-        let new_coefficients = self
-            .coefficients
-            .iter()
-            .map(|c| {
-                assert_eq!(
-                    c.value() % other.value(),
-                    0,
-                    "Division should be divisible by other"
-                );
-                Zq::new(c.value() / other.value())
-            })
-            .collect();
-        PolynomialRing {
-            coefficients: new_coefficients,
-        }
-    }
-}
-
 impl Add for PolynomialRing {
     type Output = PolynomialRing;
 
@@ -315,16 +293,6 @@ impl Rem for Zq {
     }
 }
 
-impl Div for Zq {
-    type Output = Zq;
-
-    fn div(self, other: Zq) -> Zq {
-        // todo: add this check?
-        // assert_eq!(self.value() % other.value(), 0, "Division should be divisible by other");
-        Zq::new(self.value() / other.value())
-    }
-}
-
 impl Add for Zq {
     type Output = Zq;
 
@@ -457,14 +425,6 @@ mod tests {
     }
 
     #[test]
-    fn test_zq_division() {
-        let a = Zq::new(20);
-        let b = Zq::new(5);
-        let result = a / b;
-        assert_eq!(result.value, 4);
-    }
-
-    #[test]
     fn test_zq_remainder() {
         let a = Zq::new(10);
         let b = Zq::new(3);
@@ -536,18 +496,5 @@ mod tests {
             product.coefficients, expected_coeffs,
             "Overflow handling in multiplication is incorrect"
         );
-    }
-
-    #[test]
-    fn test_polynomial_ring_division() {
-        let poly = PolynomialRing {
-            coefficients: vec![Zq::new(4), Zq::new(8), Zq::new(12)],
-        };
-        let divisor = Zq::new(2);
-        let result = poly / divisor;
-        let expected = PolynomialRing {
-            coefficients: vec![Zq::new(2), Zq::new(4), Zq::new(6)],
-        };
-        assert_eq!(result, expected);
     }
 }

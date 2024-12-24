@@ -113,13 +113,12 @@ fn num_to_basis(num: Zq, basis: Zq, digits: Zq) -> Vec<Zq> {
     let mut remainder = num;
 
     let zero = Zq::from(0);
-    let one = Zq::from(1);
-    let mut base = basis;
+    let base = basis;
 
     for _ in 0..digits.value() {
         let digit = remainder.clone() % base.clone();
         result.push(digit);
-        remainder = remainder.clone() / base.clone();
+        remainder = Zq::from(remainder.value() / base.value());
     }
 
     while result.len() < digits.value() as usize {
@@ -1031,7 +1030,7 @@ pub fn prove(
     // 4. GOAL: Aggregation
     // 4.1 psi^(k) is randomly chosen from Z_q^{L}
     // k = 1..λ/log2^q
-    let size_k = lambda / log_q;
+    let size_k = Zq::new(lambda.value() / log_q.value());
     let psi: Vec<Vec<Zq>> = (0..size_k.value())
         .map(|_| {
             (0..constraint_num_l.value())
@@ -1363,7 +1362,7 @@ fn verify(
     println!("Verifier: Check aggregated linear constraints");
     // 6. check if sum(<phi_i, z> * c_i) ?= sum(h_ij * c_i * c_j)
     // aggregation parameters
-    let size_k = lambda / log_q;
+    let size_k = Zq::new(lambda.value() / log_q.value());
     let constraint_num_l = Zq::new(5); // Define L
     let constraint_num_k = Zq::new(5);
 
@@ -1650,7 +1649,7 @@ mod tests {
             .map(|_| generate_gaussian_distribution(nd))
             .collect::<Vec<Vec<Vec<Zq>>>>();
 
-        let size_k = lambda / log_q;
+        let size_k = Zq::new(lambda.value() / log_q.value());
         let psi: Vec<Vec<Zq>> = (0..size_k.value())
             .map(|_| {
                 (0..constraint_num_l.value())
