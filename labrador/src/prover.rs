@@ -1154,8 +1154,7 @@ pub fn prove(
                     let s_j = &witness_s[j];
                     let inner_product_ij = inner_product_polynomial_ring_vector(&phi_i, &s_j)
                         + inner_product_polynomial_ring_vector(&phi_j, &s_i);
-                    // todo: why this is not working???
-                    // inner_product_ij / Zq::from(2)
+                    // Notice we do not divide by 2 here as paper described, because there is no division in the ring, we multiply by 2 instead with other terms to make verifier check work
                     inner_product_ij
                 })
                 .collect::<Vec<PolynomialRing>>()
@@ -1848,8 +1847,6 @@ mod tests {
                         let s_j = &witness_s[j];
                         let inner_product_ij = inner_product_polynomial_ring_vector(&phi_i, &s_j)
                             + inner_product_polynomial_ring_vector(&phi_j, &s_i);
-                        // todo: why this is not working???
-                        // inner_product_ij / Zq::from(2)
                         inner_product_ij
                     })
                     .collect::<Vec<PolynomialRing>>()
