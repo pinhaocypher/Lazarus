@@ -1,14 +1,12 @@
-
-use std::ops::Mul;
-use std::ops::Add;
-use std::ops::Sub;
-use std::ops::Div;
-use std::ops::Rem;
+use std::cmp::PartialEq;
 use std::fmt::Display;
 use std::iter::Sum;
+use std::ops::Add;
 use std::ops::AddAssign;
-use std::cmp::PartialEq;
-use rand::Rng;
+use std::ops::Div;
+use std::ops::Mul;
+use std::ops::Rem;
+use std::ops::Sub;
 
 #[derive(Debug, Clone, Eq)]
 pub struct PolynomialRing {
@@ -20,8 +18,13 @@ impl PolynomialRing {
 
     pub fn new(coefficients: Vec<Zq>) -> Self {
         // Ensure coefficients are in Zq and degree is less than 64
-        assert!(coefficients.len() <= Self::DEGREE_BOUND, "Polynomial degree must be less than 64");
-        PolynomialRing { coefficients: coefficients.clone() }
+        assert!(
+            coefficients.len() <= Self::DEGREE_BOUND,
+            "Polynomial degree must be less than 64"
+        );
+        PolynomialRing {
+            coefficients: coefficients.clone(),
+        }
     }
     // Multiply two polynomials in R = Zq[X]/(X^64 + 1)
     fn multiply_by_polynomial_ring(&self, other: &PolynomialRing) -> PolynomialRing {
@@ -39,7 +42,9 @@ impl PolynomialRing {
             let modulus_minus_one = Zq::from(Zq::modulus() - 1);
             for i in Self::DEGREE_BOUND..result_coefficients.len() {
                 let overflow = result_coefficients[i].clone();
-                result_coefficients[i - Self::DEGREE_BOUND] = result_coefficients[i - Self::DEGREE_BOUND].clone() + (overflow * modulus_minus_one);
+                result_coefficients[i - Self::DEGREE_BOUND] =
+                    result_coefficients[i - Self::DEGREE_BOUND].clone()
+                        + (overflow * modulus_minus_one);
             }
             result_coefficients.truncate(Self::DEGREE_BOUND);
         }
@@ -106,11 +111,7 @@ impl Mul<Zq> for PolynomialRing {
     type Output = PolynomialRing;
 
     fn mul(self, other: Zq) -> PolynomialRing {
-        let new_coefficients = self
-            .coefficients
-            .iter()
-            .map(|c| *c * other)
-            .collect();
+        let new_coefficients = self.coefficients.iter().map(|c| *c * other).collect();
         PolynomialRing {
             coefficients: new_coefficients,
         }
@@ -121,11 +122,7 @@ impl Mul<Zq> for &PolynomialRing {
     type Output = PolynomialRing;
 
     fn mul(self, other: Zq) -> PolynomialRing {
-        let new_coefficients = self
-            .coefficients
-            .iter()
-            .map(|c| *c * other)
-            .collect();
+        let new_coefficients = self.coefficients.iter().map(|c| *c * other).collect();
         PolynomialRing {
             coefficients: new_coefficients,
         }
@@ -140,7 +137,11 @@ impl Div<Zq> for PolynomialRing {
             .coefficients
             .iter()
             .map(|c| {
-                assert_eq!(c.value() % other.value(), 0, "Division should be divisible by other");
+                assert_eq!(
+                    c.value() % other.value(),
+                    0,
+                    "Division should be divisible by other"
+                );
                 Zq::new(c.value() / other.value())
             })
             .collect();
@@ -249,8 +250,18 @@ impl Add<&Zq> for &PolynomialRing {
 impl PartialEq for PolynomialRing {
     fn eq(&self, other: &Self) -> bool {
         // Compare coefficients, ignoring trailing zeros
-        let self_coeffs = self.coefficients.iter().rev().skip_while(|&&x| x == Zq::from(0)).collect::<Vec<_>>();
-        let other_coeffs = other.coefficients.iter().rev().skip_while(|&&x| x == Zq::from(0)).collect::<Vec<_>>();
+        let self_coeffs = self
+            .coefficients
+            .iter()
+            .rev()
+            .skip_while(|&&x| x == Zq::from(0))
+            .collect::<Vec<_>>();
+        let other_coeffs = other
+            .coefficients
+            .iter()
+            .rev()
+            .skip_while(|&&x| x == Zq::from(0))
+            .collect::<Vec<_>>();
 
         self_coeffs == other_coeffs
     }
@@ -270,7 +281,9 @@ impl Zq {
         Self::Q
     }
     pub fn new(value: usize) -> Self {
-        Zq { value: value % Self::Q }
+        Zq {
+            value: value % Self::Q,
+        }
     }
 
     pub fn value(&self) -> usize {
@@ -327,7 +340,6 @@ impl AddAssign for Zq {
     }
 }
 
-
 impl Sub for Zq {
     type Output = Zq;
 
@@ -357,7 +369,6 @@ impl Sum for Zq {
     }
 }
 
-
 #[derive(Debug)]
 pub struct RqMatrix {
     pub values: Vec<Vec<PolynomialRing>>, // matrix of PolynomialRing values
@@ -379,8 +390,16 @@ impl RqMatrix {
                     .collect()
             })
             .collect();
-        assert_eq!(values.len(), size_kappa_usize, "values must have the same length as size_kappa");
-        assert_eq!(values[0].len(), size_n_usize, "values[0] must have the same length as size_n");
+        assert_eq!(
+            values.len(),
+            size_kappa_usize,
+            "values must have the same length as size_kappa"
+        );
+        assert_eq!(
+            values[0].len(),
+            size_n_usize,
+            "values[0] must have the same length as size_n"
+        );
         RqMatrix { values }
     }
 }
@@ -462,7 +481,10 @@ mod tests {
             coefficients: vec![Zq::from(3), Zq::from(4)],
         };
         let result = poly1 * poly2;
-        assert_eq!(result.coefficients, vec![Zq::from(3), Zq::from(10), Zq::from(8)]); // 1*3, 1*4 + 2*3, 2*4
+        assert_eq!(
+            result.coefficients,
+            vec![Zq::from(3), Zq::from(10), Zq::from(8)]
+        ); // 1*3, 1*4 + 2*3, 2*4
     }
 
     #[test]
@@ -474,16 +496,16 @@ mod tests {
 
         // Initialize poly1 as X^63 + 1
         let mut poly1_coeffs = vec![Zq::from(0); 64];
-        poly1_coeffs[0] = Zq::from(1);    // Constant term
-        poly1_coeffs[63] = Zq::from(1);   // X^63 term
+        poly1_coeffs[0] = Zq::from(1); // Constant term
+        poly1_coeffs[63] = Zq::from(1); // X^63 term
         let poly1 = PolynomialRing {
             coefficients: poly1_coeffs,
         };
 
         // Initialize poly1 as X^63 + X
         let mut poly2_coeffs = vec![Zq::from(0); 64];
-        poly2_coeffs[1] = Zq::from(1);   // X term
-        poly2_coeffs[63] = Zq::from(1);   // X^63 term
+        poly2_coeffs[1] = Zq::from(1); // X term
+        poly2_coeffs[63] = Zq::from(1); // X^63 term
         let poly2 = PolynomialRing {
             coefficients: poly2_coeffs,
         };
@@ -497,18 +519,21 @@ mod tests {
         // coefficients[63] = 2
         // All other coefficients should be 0
         let mut expected_coeffs = vec![Zq::from(0); 64];
-        expected_coeffs[0] = Zq::from(Zq::modulus() - 1);    // Constant term
-        expected_coeffs[1] = Zq::from(1);                    // X term
-        expected_coeffs[62] = Zq::from(Zq::modulus() - 1);   // X^62 term
-        expected_coeffs[63] = Zq::from(1);                   // X^63 term
+        expected_coeffs[0] = Zq::from(Zq::modulus() - 1); // Constant term
+        expected_coeffs[1] = Zq::from(1); // X term
+        expected_coeffs[62] = Zq::from(Zq::modulus() - 1); // X^62 term
+        expected_coeffs[63] = Zq::from(1); // X^63 term
 
         // Assert that the product has the correct degree bound
-        assert_eq!(product.coefficients.len(), 64, "Product should be truncated to DEGREE_BOUND");
+        assert_eq!(
+            product.coefficients.len(),
+            64,
+            "Product should be truncated to DEGREE_BOUND"
+        );
 
         // Assert that the coefficients match the expected values
         assert_eq!(
-            product.coefficients,
-            expected_coeffs,
+            product.coefficients, expected_coeffs,
             "Overflow handling in multiplication is incorrect"
         );
     }
