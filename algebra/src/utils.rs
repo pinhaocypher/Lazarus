@@ -23,8 +23,8 @@ pub fn poly_vec_add_poly_vec(a: &[PolynomialRing], b: &[PolynomialRing]) -> Vec<
 
 // inner product of 2 vectors of PolynomialRing
 pub fn inner_product_polynomial_ring_vector(
-    a: &[PolynomialRing],
-    b: &[PolynomialRing],
+    a: &Vec<PolynomialRing>,
+    b: &Vec<PolynomialRing>,
 ) -> PolynomialRing {
     assert_eq!(
         a.len(),

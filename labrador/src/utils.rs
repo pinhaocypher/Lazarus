@@ -123,18 +123,3 @@ pub fn calculate_outer_comm_u2(
             },
         )
 }
-
-pub fn poly_matrix_decompose_and_aggregate(
-    poly: &Vec<Vec<PolynomialRing>>,
-    basis: Zq,
-    digits: Zq,
-) -> Vec<Vec<Vec<PolynomialRing>>> {
-    // Decompose h_ij into basis t_1 parts
-    let poly_basis_form = poly_matrix_decompose_to_basis(poly, basis, digits);
-
-    // Pick elements at each position across all inner vectors and aggregate them
-    poly_basis_form
-        .iter()
-        .map(aggregate_poly_vec_basis_form)
-        .collect()
-}

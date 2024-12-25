@@ -1,4 +1,7 @@
-use crate::gadgets::gaussian_generator::generate_gaussian_distribution;
+use crate::gadgets::{
+    conjugation_automorphism::conjugation_automorphism, constraints::calculate_b_constraint,
+    gaussian_generator::generate_gaussian_distribution,
+};
 use algebra::{
     generate_random_polynomial_ring, inner_product_polynomial_ring_vector, zero_poly,
     PolynomialRing, Zq,
@@ -525,5 +528,128 @@ mod tests {
             .collect();
 
         check_aggr_relation(&a_aggr, &b_aggr, &g, &h);
+    }
+
+    #[test]
+    fn test_aggr_relation() {
+        let size_r = Zq::new(3); // r: Number of witness elements
+        let size_n = Zq::new(5); // n
+        let deg_bound_d = Zq::new(8); // random polynomial degree bound
+                                      // generate size_r * size_n witness_s
+        let witness_s: Vec<Vec<PolynomialRing>> = (0..size_r.value())
+            .map(|_| {
+                (0..size_n.value())
+                    .map(|_| generate_random_polynomial_ring(deg_bound_d.value()))
+                    .collect()
+            })
+            .collect();
+
+        // generate size_r * size_r a_aggr
+        let a_aggr: Vec<Vec<PolynomialRing>> = (0..size_r.value())
+            .map(|i| {
+                (0..size_r.value())
+                    .map(|j| generate_random_polynomial_ring(deg_bound_d.value()))
+                    .collect::<Vec<PolynomialRing>>()
+            })
+            .collect();
+
+        // generate size_r * size_n phi_aggr
+        let phi_aggr: Vec<Vec<PolynomialRing>> = (0..size_r.value())
+            .map(|i| {
+                (0..size_n.value())
+                    .map(|j| {
+                        // generate_random_polynomial_ring(deg_bound_d.value())
+                        generate_random_polynomial_ring(64)
+                    })
+                    .collect::<Vec<PolynomialRing>>()
+            })
+            .collect();
+
+        let b_aggr: PolynomialRing = calculate_b_constraint(&witness_s, &a_aggr, &phi_aggr);
+
+        // Calculate garbage polynomial g_ij = <s_i, s_j>
+        let g: Vec<Vec<PolynomialRing>> = (0..size_r.value())
+            .map(|i| {
+                (0..size_r.value())
+                    .map(|j| {
+                        let s_i = &witness_s[i];
+                        let s_j = &witness_s[j];
+                        inner_product_polynomial_ring_vector(&s_i, &s_j)
+                    })
+                    .collect::<Vec<PolynomialRing>>()
+            })
+            .collect();
+
+        let h: Vec<Vec<PolynomialRing>> = (0..size_r.value())
+            .map(|i| {
+                (0..size_r.value())
+                    .map(|j| {
+                        let phi_i = &phi_aggr[i];
+                        let phi_j = &phi_aggr[j];
+                        let s_i = &witness_s[i];
+                        let s_j = &witness_s[j];
+                        let inner_product_ij = inner_product_polynomial_ring_vector(&phi_i, &s_j)
+                            + inner_product_polynomial_ring_vector(&phi_j, &s_i);
+                        inner_product_ij
+                    })
+                    .collect::<Vec<PolynomialRing>>()
+            })
+            .collect();
+
+        // Calculate b^(k)
+        let mut quad_sum = zero_poly();
+        let mut linear_sum = zero_poly();
+        for i in 0..size_r.value() {
+            for j in 0..size_r.value() {
+                // calculate inner product of s[i] and s[j], will return a single PolynomialRing
+                let elem_s_i = &witness_s[i];
+                let elem_s_j = &witness_s[j];
+                // Calculate inner product and update b
+                let inner_product_si_sj =
+                    inner_product_polynomial_ring_vector(&elem_s_i, &elem_s_j);
+                let a_constr = &a_aggr[i][j];
+                quad_sum = quad_sum + (inner_product_si_sj * a_constr);
+            }
+            // calculate inner product of s[i] and phi
+            let inner_product_si_phi =
+                inner_product_polynomial_ring_vector(&witness_s[i], &phi_aggr[i]);
+            println!("inner_product_si_phi: {:?}", inner_product_si_phi);
+            println!("h[i][i]: {:?}", h[i][i]);
+            assert_eq!(&inner_product_si_phi * Zq::from(2), h[i][i]);
+            linear_sum = linear_sum + inner_product_si_phi;
+        }
+
+        // use function to check
+        check_aggr_relation(&a_aggr, &b_aggr, &g, &h);
+
+        // ================================================
+        // manually check
+
+        // 7. check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
+        // 7.1 calculate sum(a_ij * g_ij)
+        let sum_a_ij_g_ij = a_aggr
+            .iter()
+            .zip(g.iter())
+            .map(|(a_i, g_i)| {
+                a_i.iter()
+                    .zip(g_i.iter())
+                    .map(|(a_ij, g_ij)| a_ij * g_ij)
+                    .fold(zero_poly(), |acc, val| acc + val)
+            })
+            .fold(zero_poly(), |acc, val| acc + val);
+
+        // 7.2 calculate sum(h_ii)
+        let sum_h_ii = (0..size_r.value()).fold(zero_poly(), |acc, i| acc + &h[i][i]);
+
+        // 2 times sum
+        let quad_sum2 = quad_sum * Zq::from(2);
+        let linear_sum2 = linear_sum * Zq::from(2);
+        let b_aggr2 = &b_aggr * Zq::from(2);
+        let sum_a_ij_g_ij2 = sum_a_ij_g_ij * Zq::from(2);
+        assert_eq!(linear_sum2, sum_h_ii);
+        assert_eq!(quad_sum2, sum_a_ij_g_ij2);
+        assert_eq!(quad_sum2 + linear_sum2, b_aggr2);
+        // 7.3 check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
+        assert_eq!(sum_a_ij_g_ij2 + sum_h_ii, b_aggr2);
     }
 }

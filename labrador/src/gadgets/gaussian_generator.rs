@@ -23,3 +23,20 @@ pub fn generate_gaussian_distribution(nd: Zq) -> Vec<Vec<Zq>> {
 
     matrix
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_gaussian_distribution() {
+        let nd = Zq::from(10);
+        let matrix = generate_gaussian_distribution(nd);
+        assert_eq!(matrix.len(), 256);
+        assert_eq!(matrix[0].len(), nd.value());
+        assert_eq!(matrix[1].len(), nd.value());
+        assert!(matrix.iter().all(|row| row
+            .iter()
+            .all(|&val| val.value == Zq::Q - 1 || val.value == 0 || val.value == 1)));
+    }
+}
