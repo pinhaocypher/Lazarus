@@ -33,21 +33,20 @@ impl PolynomialRing {
         // Initialize a vector to hold the intermediate multiplication result
         let mut result_coefficients =
             vec![Zq::new(0); self.coefficients.len() + other.coefficients.len() - 1];
-        for (i, coeff1) in self.coefficients.iter().enumerate() {
-            for (j, coeff2) in other.coefficients.iter().enumerate() {
-                result_coefficients[i + j] = result_coefficients[i + j] + (*coeff1 * *coeff2);
+        for (i, &coeff1) in self.coefficients.iter().enumerate() {
+            for (j, &coeff2) in other.coefficients.iter().enumerate() {
+                result_coefficients[i + j] += coeff1 * coeff2;
             }
         }
 
         // Reduce modulo X^64 + 1
         if result_coefficients.len() > Self::DEGREE_BOUND {
             let modulus_minus_one = Zq::from(Zq::modulus() - 1);
-            for i in Self::DEGREE_BOUND..result_coefficients.len() {
-                let overflow = result_coefficients[i].clone();
-                result_coefficients[i - Self::DEGREE_BOUND] =
-                    result_coefficients[i - Self::DEGREE_BOUND].clone()
-                        + (overflow * modulus_minus_one);
+            let (front, back) = result_coefficients.split_at_mut(Self::DEGREE_BOUND);
+            for (i, &overflow) in back.iter().enumerate() {
+                front[i] += overflow * modulus_minus_one;
             }
+            result_coefficients.truncate(Self::DEGREE_BOUND);
             result_coefficients.truncate(Self::DEGREE_BOUND);
         }
         PolynomialRing {
@@ -56,20 +55,28 @@ impl PolynomialRing {
     }
 
     fn add_polynomial_ring(&self, other: &PolynomialRing) -> PolynomialRing {
-        let max_len = std::cmp::max(self.coefficients.len(), other.coefficients.len());
+        let len_a = self.coefficients.len();
+        let len_b = other.coefficients.len();
+        let max_len = std::cmp::max(len_a, len_b);
         let mut result_coefficients = Vec::with_capacity(max_len);
-        for i in 0..max_len {
-            let a = if i < self.coefficients.len() {
-                self.coefficients[i]
-            } else {
-                Zq::new(0)
-            };
-            let b = if i < other.coefficients.len() {
-                other.coefficients[i]
-            } else {
-                Zq::new(0)
-            };
-            result_coefficients.push(a + b);
+
+        result_coefficients.extend(
+            self.coefficients
+                .iter()
+                .zip(other.coefficients.iter())
+                .map(|(&a, &b)| a + b),
+        );
+
+        match len_a.cmp(&len_b) {
+            std::cmp::Ordering::Greater => {
+                result_coefficients.extend_from_slice(&self.coefficients[len_b..]);
+            }
+            std::cmp::Ordering::Less => {
+                result_coefficients.extend_from_slice(&other.coefficients[len_a..]);
+            }
+            std::cmp::Ordering::Equal => {
+                // Do nothing
+            }
         }
         PolynomialRing {
             coefficients: result_coefficients,
@@ -169,7 +176,7 @@ impl Add<Zq> for PolynomialRing {
     fn add(self, other: Zq) -> PolynomialRing {
         let mut new_coefficients = self.coefficients.clone();
         if let Some(first) = new_coefficients.get_mut(0) {
-            *first = *first + other;
+            *first += other;
         } else {
             new_coefficients.push(other);
         }
@@ -185,7 +192,7 @@ impl Add<&Zq> for PolynomialRing {
     fn add(self, other: &Zq) -> PolynomialRing {
         let mut new_coefficients = self.coefficients.clone();
         if let Some(first) = new_coefficients.get_mut(0) {
-            *first = *first + *other;
+            *first += *other;
         } else {
             new_coefficients.push(*other);
         }
@@ -201,7 +208,7 @@ impl Add<Zq> for &PolynomialRing {
     fn add(self, other: Zq) -> PolynomialRing {
         let mut new_coefficients = self.coefficients.clone();
         if let Some(first) = new_coefficients.get_mut(0) {
-            *first = *first + other;
+            *first += other;
         } else {
             new_coefficients.push(other);
         }
@@ -217,7 +224,7 @@ impl Add<&Zq> for &PolynomialRing {
     fn add(self, other: &Zq) -> PolynomialRing {
         let mut new_coefficients = self.coefficients.clone();
         if let Some(first) = new_coefficients.get_mut(0) {
-            *first = *first + *other;
+            *first += *other;
         } else {
             new_coefficients.push(*other);
         }
@@ -346,8 +353,8 @@ pub struct RqMatrix {
 
 impl RqMatrix {
     pub fn new(kappa: Zq, size_n: Zq) -> Self {
-        let size_kappa_usize: usize = kappa.value() as usize;
-        let size_n_usize: usize = size_n.value() as usize;
+        let size_kappa_usize: usize = kappa.value();
+        let size_n_usize: usize = size_n.value();
         let mut rng = rand::thread_rng();
         let values: Vec<Vec<PolynomialRing>> = (0..size_kappa_usize)
             .map(|_| {

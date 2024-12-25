@@ -18,8 +18,8 @@ fn poly_vec_add_poly_vec(a: &Vec<PolynomialRing>, b: &Vec<PolynomialRing>) -> Ve
 
 // inner product of 2 vectors of PolynomialRing
 fn inner_product_polynomial_ring_vector(
-    a: &Vec<PolynomialRing>,
-    b: &Vec<PolynomialRing>,
+    a: &[PolynomialRing],
+    b: &[PolynomialRing],
 ) -> PolynomialRing {
     assert_eq!(
         a.len(),
@@ -60,9 +60,9 @@ fn inner_product_poly_matrix_and_poly_vector(
 }
 // Function to calculate b^(k)
 fn calculate_b_constraint(
-    s: &Vec<Vec<PolynomialRing>>,
-    a_constraint: &Vec<Vec<PolynomialRing>>,
-    phi_constraint: &Vec<Vec<PolynomialRing>>,
+    s: &[Vec<PolynomialRing>],
+    a_constraint: &[Vec<PolynomialRing>],
+    phi_constraint: &[Vec<PolynomialRing>],
 ) -> PolynomialRing {
     let mut b: PolynomialRing = PolynomialRing {
         coefficients: vec![Zq::from(0)],
@@ -76,7 +76,7 @@ fn calculate_b_constraint(
             let elem_s_i = &s[i];
             let elem_s_j = &s[j];
             // Calculate inner product and update b
-            let inner_product_si_sj = inner_product_polynomial_ring_vector(&elem_s_i, &elem_s_j);
+            let inner_product_si_sj = inner_product_polynomial_ring_vector(elem_s_i, elem_s_j);
             let a_constr = &a_constraint[i][j];
             b = b + (inner_product_si_sj * a_constr);
         }
@@ -116,14 +116,14 @@ fn num_to_basis(num: Zq, basis: Zq, digits: Zq) -> Vec<Zq> {
     let base = basis;
 
     for _ in 0..digits.value() {
-        let digit = remainder.clone() % base.clone();
+        let digit = remainder % base;
         result.push(digit);
         remainder = Zq::from(remainder.value() / base.value());
     }
 
-    while result.len() < digits.value() as usize {
+    while result.len() < digits.value() {
         // push 0 to the highest position
-        result.push(zero.clone());
+        result.push(zero);
     }
 
     result
@@ -133,20 +133,20 @@ fn num_to_basis(num: Zq, basis: Zq, digits: Zq) -> Vec<Zq> {
 fn ring_polynomial_to_basis(poly: &PolynomialRing, basis: Zq, digits: Zq) -> Vec<Vec<Zq>> {
     poly.coefficients
         .iter()
-        .map(|coeff| num_to_basis(coeff.clone(), basis.clone(), digits.clone()))
+        .map(|&coeff| num_to_basis(coeff, basis, digits))
         .collect()
 }
 
 fn generate_gaussian_distribution(nd: Zq) -> Vec<Vec<Zq>> {
-    let nd_usize: usize = nd.value() as usize;
+    let nd_usize: usize = nd.value();
     let modulus: usize = Zq::modulus();
     let mut rng = rand::thread_rng();
     let mut matrix = vec![vec![Zq::from(0); nd_usize]; 256]; // Initialize a 256 x nd matrix
 
-    for i in 0..256 {
-        for j in 0..nd_usize {
+    for row in matrix.iter_mut() {
+        for cell in row.iter_mut() {
             let random_value: f32 = rng.gen(); // Generate a random float between 0 and 1
-            matrix[i][j] = if random_value < 0.25 {
+            *cell = if random_value < 0.25 {
                 // todo: should we use symmetric distribution from -q/2 to q/2?
                 Zq::from(modulus - 1) // 1/4 probability
             } else if random_value < 0.75 {
@@ -169,9 +169,9 @@ fn conjugation_automorphism(poly: &PolynomialRing) -> PolynomialRing {
         .map(|i| {
             if i < poly.coefficients.len() {
                 if i == 0 {
-                    poly.coefficients[i].clone()
+                    poly.coefficients[i]
                 } else {
-                    poly.coefficients[i].clone() * modulus_minus_one
+                    poly.coefficients[i] * modulus_minus_one
                 }
             } else {
                 Zq::from(0)
@@ -908,7 +908,7 @@ pub fn prove(
                 .map(|j| {
                     let s_i = &witness_s[i];
                     let s_j = &witness_s[j];
-                    inner_product_polynomial_ring_vector(&s_i, &s_j)
+                    inner_product_polynomial_ring_vector(s_i, s_j)
                 })
                 .collect::<Vec<PolynomialRing>>()
         })
