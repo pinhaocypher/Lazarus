@@ -21,6 +21,7 @@ pub fn poly_vec_add_poly_vec(a: &[PolynomialRing], b: &[PolynomialRing]) -> Vec<
     a.iter().zip(b.iter()).map(|(a_i, b_i)| a_i + b_i).collect()
 }
 
+#[allow(clippy::ptr_arg)]
 // inner product of 2 vectors of PolynomialRing
 pub fn inner_product_polynomial_ring_vector(
     a: &Vec<PolynomialRing>,
@@ -75,7 +76,7 @@ pub fn generate_random_polynomial_ring(deg_bound_d: usize) -> PolynomialRing {
 
 // calculate matrix times vector of PolynomialRing
 pub fn matrix_poly_times_poly_vector(
-    poly_matrix: &Vec<Vec<PolynomialRing>>,
+    poly_matrix: &[Vec<PolynomialRing>],
     poly_vec: &Vec<PolynomialRing>,
 ) -> Vec<PolynomialRing> {
     poly_matrix

@@ -198,7 +198,7 @@ pub fn verify(
     let sum_phi_i_z_c_i = phi_aggr
         .iter()
         .zip(c.iter())
-        .map(|(phi_i, c_i)| inner_product_polynomial_ring_vector(&phi_i, &z) * c_i)
+        .map(|(phi_i, c_i)| inner_product_polynomial_ring_vector(phi_i, &z) * c_i)
         .fold(zero_poly(), |acc, val| acc + val);
     // calculate sum(h_ij * c_i * c_j)
     let mut sum_h_ij_c_i_c_j = zero_poly();
@@ -216,8 +216,8 @@ pub fn verify(
     println!("Verifier: Check opening of outer commitments(todo)");
     // 8. check if u1 is valid
     let u1_check = calculate_outer_comm_u1(
-        &b_matrix,
-        &c_matrix,
+        b_matrix,
+        c_matrix,
         &g_matrix_aggregated,
         &all_t_i_basis_form_aggregated,
         kappa1,
@@ -229,7 +229,7 @@ pub fn verify(
     assert_eq!(u1, u1_check);
     // 9. check if u2 is valid
     let u2_check = calculate_outer_comm_u2(
-        &d_matrix,
+        d_matrix,
         &h_gar_poly_basis_form_aggregated,
         t2,
         kappa2,

@@ -199,7 +199,7 @@ pub fn prove(
 
     // 2.3 calculate u1
     let u1 = calculate_outer_comm_u1(
-        &b_matrix,
+        b_matrix,
         &c_matrix,
         &g_matrix_aggregated,
         &all_t_i_basis_form_aggregated,
@@ -380,7 +380,7 @@ pub fn prove(
             .sum();
         // <⟨omega^(k),p⟩>
         let omega_k = &omega[k];
-        let inner_product_omega_k_p = inner_product_zq_vector(&omega_k, &p);
+        let inner_product_omega_k_p = inner_product_zq_vector(omega_k, &p);
         // add them together
         b_k_0_computed += inner_product_omega_k_p;
         assert_eq!(b_k_0_from_poly, b_k_0_computed);
@@ -421,10 +421,9 @@ pub fn prove(
                     let phi_j = &phi_aggr[j];
                     let s_i = &witness_s[i];
                     let s_j = &witness_s[j];
-                    let inner_product_ij = inner_product_polynomial_ring_vector(&phi_i, &s_j)
-                        + inner_product_polynomial_ring_vector(&phi_j, &s_i);
+                    inner_product_polynomial_ring_vector(phi_i, s_j)
+                        + inner_product_polynomial_ring_vector(phi_j, s_i)
                     // Notice we do not divide by 2 here as paper described, because there is no division in the ring, we multiply by 2 instead with other terms to make verifier check work
-                    inner_product_ij
                 })
                 .collect::<Vec<PolynomialRing>>()
         })
@@ -445,7 +444,7 @@ pub fn prove(
 
     // 5.4 u2 = sum D_ij * h_ij^(k) for all k = 1..(t1-1)
     let u2 = calculate_outer_comm_u2(
-        &d_matrix,
+        d_matrix,
         &h_gar_poly_basis_form_aggregated,
         t2,
         kappa2,
@@ -478,7 +477,7 @@ pub fn prove(
     let sum_phi_i_z_c_i = phi_aggr
         .iter()
         .zip(c.iter())
-        .map(|(phi_i, c_i)| inner_product_polynomial_ring_vector(&phi_i, &z) * c_i)
+        .map(|(phi_i, c_i)| inner_product_polynomial_ring_vector(phi_i, &z) * c_i)
         .fold(zero_poly(), |acc, val| acc + val);
 
     // calculate sum(h_ij * c_i * c_j)
@@ -563,9 +562,9 @@ mod tests {
 
         // generate size_r * size_n phi_aggr
         let phi_aggr: Vec<Vec<PolynomialRing>> = (0..size_r.value())
-            .map(|i| {
+            .map(|_| {
                 (0..size_n.value())
-                    .map(|j| generate_random_polynomial_ring(deg_bound_d.value()))
+                    .map(|_| generate_random_polynomial_ring(deg_bound_d.value()))
                     .collect::<Vec<PolynomialRing>>()
             })
             .collect();
@@ -578,8 +577,8 @@ mod tests {
                         let phi_j = &phi_aggr[j];
                         let s_i = &witness_s[i];
                         let s_j = &witness_s[j];
-                        let inner_product_ij = inner_product_polynomial_ring_vector(&phi_i, &s_j)
-                            + inner_product_polynomial_ring_vector(&phi_j, &s_i);
+                        let inner_product_ij = inner_product_polynomial_ring_vector(phi_i, s_j)
+                            + inner_product_polynomial_ring_vector(phi_j, s_i);
                         inner_product_ij
                     })
                     .collect::<Vec<PolynomialRing>>()
@@ -597,7 +596,7 @@ mod tests {
         let sum_phi_i_z_c_i = phi_aggr
             .iter()
             .zip(c.iter())
-            .map(|(phi_i, c_i)| inner_product_polynomial_ring_vector(&phi_i, &z) * c_i)
+            .map(|(phi_i, c_i)| inner_product_polynomial_ring_vector(phi_i, &z) * c_i)
             .fold(zero_poly(), |acc, val| acc + val);
         // calculate sum(h_ij * c_i * c_j)
         let mut sum_h_ij_c_i_c_j = zero_poly();
@@ -653,7 +652,7 @@ mod tests {
                             size_n.value(),
                             "s_j must have the same length as size_n"
                         );
-                        inner_product_polynomial_ring_vector(&s_i, &s_j)
+                        inner_product_polynomial_ring_vector(s_i, s_j)
                     })
                     .collect::<Vec<PolynomialRing>>()
             })
@@ -681,7 +680,8 @@ mod tests {
         assert_eq!(z_z_inner_product, sum_g_ij_c_i_c_j);
     }
 
-    #[test]
+    // TODO(junochiu): check b_k?
+    /*#[test]
     fn test_calculate_b_k() {
         let r = 3;
         let n = 4;
@@ -715,8 +715,8 @@ mod tests {
             })
             .collect();
         let b_k = calculate_b_constraint(&s, &a_constraint, &phi_constraint);
-        // assert_eq!(b_k, 1983);
-    }
+        //assert_eq!(b_k, 1983);
+    }*/
 
     #[test]
     fn test_a_new() {

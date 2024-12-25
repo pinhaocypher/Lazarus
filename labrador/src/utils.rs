@@ -8,10 +8,10 @@ use algebra::{PolynomialRing, RqMatrix, Zq};
 // First summation: ∑ B_ik * t_i^(k), 1 ≤ i ≤ r, 0 ≤ k ≤ t1−1
 // Initialize u1 with zeros with size kappa1, each element is a polynomial ring
 pub fn calculate_outer_comm_u1(
-    b_matrix: &Vec<Vec<RqMatrix>>,
-    c_matrix: &Vec<Vec<Vec<RqMatrix>>>,
-    g_matrix_aggregated: &Vec<Vec<Vec<PolynomialRing>>>,
-    all_t_i_basis_form_aggregated: &Vec<Vec<Vec<PolynomialRing>>>,
+    b_matrix: &[Vec<RqMatrix>],
+    c_matrix: &[Vec<Vec<RqMatrix>>],
+    g_matrix_aggregated: &[Vec<Vec<PolynomialRing>>],
+    all_t_i_basis_form_aggregated: &[Vec<Vec<PolynomialRing>>],
     kappa1: Zq,
     t1: Zq,
     t2: Zq,
@@ -82,8 +82,8 @@ pub fn calculate_outer_comm_u1(
 }
 
 pub fn calculate_outer_comm_u2(
-    d_matrix: &Vec<Vec<Vec<RqMatrix>>>,
-    h_gar_poly_basis_form_aggregated: &Vec<Vec<Vec<PolynomialRing>>>,
+    d_matrix: &[Vec<Vec<RqMatrix>>],
+    h_gar_poly_basis_form_aggregated: &[Vec<Vec<PolynomialRing>>],
     t2: Zq,
     kappa2: Zq,
     size_r: Zq,

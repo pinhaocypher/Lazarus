@@ -519,9 +519,8 @@ mod tests {
                         let phi_j = &phi_aggr[j];
                         let s_i = &witness_s[i];
                         let s_j = &witness_s[j];
-                        let inner_product_ij = inner_product_polynomial_ring_vector(&phi_i, &s_j)
-                            + inner_product_polynomial_ring_vector(&phi_j, &s_i);
-                        inner_product_ij
+                        inner_product_polynomial_ring_vector(phi_i, s_j)
+                            + inner_product_polynomial_ring_vector(phi_j, s_i)
                     })
                     .collect::<Vec<PolynomialRing>>()
             })
@@ -546,18 +545,18 @@ mod tests {
 
         // generate size_r * size_r a_aggr
         let a_aggr: Vec<Vec<PolynomialRing>> = (0..size_r.value())
-            .map(|i| {
+            .map(|_| {
                 (0..size_r.value())
-                    .map(|j| generate_random_polynomial_ring(deg_bound_d.value()))
+                    .map(|_| generate_random_polynomial_ring(deg_bound_d.value()))
                     .collect::<Vec<PolynomialRing>>()
             })
             .collect();
 
         // generate size_r * size_n phi_aggr
         let phi_aggr: Vec<Vec<PolynomialRing>> = (0..size_r.value())
-            .map(|i| {
+            .map(|_| {
                 (0..size_n.value())
-                    .map(|j| {
+                    .map(|_| {
                         // generate_random_polynomial_ring(deg_bound_d.value())
                         generate_random_polynomial_ring(64)
                     })
@@ -574,7 +573,7 @@ mod tests {
                     .map(|j| {
                         let s_i = &witness_s[i];
                         let s_j = &witness_s[j];
-                        inner_product_polynomial_ring_vector(&s_i, &s_j)
+                        inner_product_polynomial_ring_vector(s_i, s_j)
                     })
                     .collect::<Vec<PolynomialRing>>()
             })
@@ -588,8 +587,8 @@ mod tests {
                         let phi_j = &phi_aggr[j];
                         let s_i = &witness_s[i];
                         let s_j = &witness_s[j];
-                        let inner_product_ij = inner_product_polynomial_ring_vector(&phi_i, &s_j)
-                            + inner_product_polynomial_ring_vector(&phi_j, &s_i);
+                        let inner_product_ij = inner_product_polynomial_ring_vector(phi_i, s_j)
+                            + inner_product_polynomial_ring_vector(phi_j, s_i);
                         inner_product_ij
                     })
                     .collect::<Vec<PolynomialRing>>()
@@ -605,8 +604,7 @@ mod tests {
                 let elem_s_i = &witness_s[i];
                 let elem_s_j = &witness_s[j];
                 // Calculate inner product and update b
-                let inner_product_si_sj =
-                    inner_product_polynomial_ring_vector(&elem_s_i, &elem_s_j);
+                let inner_product_si_sj = inner_product_polynomial_ring_vector(elem_s_i, elem_s_j);
                 let a_constr = &a_aggr[i][j];
                 quad_sum = quad_sum + (inner_product_si_sj * a_constr);
             }
