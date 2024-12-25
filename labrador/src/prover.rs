@@ -85,14 +85,14 @@ fn num_to_basis(num: Zq, basis: Zq, digits: Zq) -> Vec<Zq> {
     let base = basis;
 
     for _ in 0..digits.value() {
-        let digit = remainder.clone() % base.clone();
+        let digit = remainder % base;
         result.push(digit);
-        remainder = remainder.clone() / base.clone();
+        remainder = remainder / base;
     }
 
     while result.len() < digits.value() {
         // push 0 to the highest position
-        result.push(zero.clone());
+        result.push(zero);
     }
 
     result
@@ -102,7 +102,7 @@ fn num_to_basis(num: Zq, basis: Zq, digits: Zq) -> Vec<Zq> {
 fn ring_polynomial_to_basis(poly: &PolynomialRing, basis: Zq, digits: Zq) -> Vec<Vec<Zq>> {
     poly.coefficients
         .iter()
-        .map(|coeff| num_to_basis(coeff.clone(), basis.clone(), digits.clone()))
+        .map(|&coeff| num_to_basis(coeff, basis, digits))
         .collect()
 }
 
@@ -137,9 +137,9 @@ fn conjugation_automorphism(poly: &PolynomialRing) -> PolynomialRing {
         .map(|i| {
             if i < poly.coefficients.len() {
                 if i == 0 {
-                    poly.coefficients[i].clone()
+                    poly.coefficients[i]
                 } else {
-                    poly.coefficients[i].clone() * modulus_minus_one
+                    poly.coefficients[i] * modulus_minus_one
                 }
             } else {
                 Zq::from(0)
@@ -195,10 +195,10 @@ fn decompose_poly_to_basis_form(
             for k in 0..num_loop_needed {
                 let mut row_k: Vec<Zq> = Vec::new();
                 for basis_needed in 0..num_basis_needed {
-                    if let Some(num_to_be_pushed) =
+                    if let Some(&num_to_be_pushed) =
                         poly_i_j_basis_form.get(basis_needed).and_then(|v| v.get(k))
                     {
-                        row_k.push(num_to_be_pushed.clone());
+                        row_k.push(num_to_be_pushed);
                     } else {
                         row_k.push(Zq::from(0));
                     }
