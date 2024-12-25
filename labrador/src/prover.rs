@@ -112,10 +112,10 @@ fn generate_gaussian_distribution(nd: Zq) -> Vec<Vec<Zq>> {
     let mut rng = rand::thread_rng();
     let mut matrix = vec![vec![Zq::from(0); nd_usize]; 256]; // Initialize a 256 x nd matrix
 
-    for i in 0..256 {
-        for j in 0..nd_usize {
+    for row in matrix.iter_mut() {
+        for cell in row.iter_mut() {
             let random_value: f32 = rng.gen(); // Generate a random float between 0 and 1
-            matrix[i][j] = if random_value < 0.25 {
+            *cell = if random_value < 0.25 {
                 // todo: should we use symmetric distribution from -q/2 to q/2?
                 Zq::from(modulus - 1) // 1/4 probability
             } else if random_value < 0.75 {
@@ -185,9 +185,9 @@ fn decompose_poly_to_basis_form(
 
     // Pick elements at each position across all inner vectors and aggregate them
     let mut poly_basis_form_aggregated: Vec<Vec<Vec<PolynomialRing>>> = Vec::new();
-    for (_i, poly_i_basis_form) in poly_basis_form.iter().enumerate() {
+    for poly_i_basis_form in poly_basis_form.iter() {
         let mut row_results: Vec<Vec<PolynomialRing>> = Vec::new();
-        for (_j, poly_i_j_basis_form) in poly_i_basis_form.iter().enumerate() {
+        for poly_i_j_basis_form in poly_i_basis_form.iter() {
             let mut row_results_j: Vec<PolynomialRing> = Vec::new();
             // Get the number of basis parts and the number of loops needed
             let num_basis_needed = poly_i_j_basis_form.len();
@@ -251,7 +251,7 @@ pub fn prove() {
             .iter()
             .map(|elem| elem.coefficients[0].pow(2))
             .fold(Zq::new(0), |acc, val| acc + val);
-        sum_squared_norms = sum_squared_norms + norm_squared;
+        sum_squared_norms += norm_squared;
     }
     println!("sum_squared_norms: {}", sum_squared_norms.value());
     println!("beta^2: {}", beta.pow(2));
@@ -394,7 +394,7 @@ pub fn prove() {
                 .map(|j| {
                     let s_i = &witness_s[i];
                     let s_j = &witness_s[j];
-                    inner_product_polynomial_ring_vector(&s_i, &s_j)
+                    inner_product_polynomial_ring_vector(s_i, s_j)
                 })
                 .collect::<Vec<PolynomialRing>>()
         })
@@ -526,8 +526,7 @@ pub fn prove() {
         .iter()
         .map(|s_i| {
             s_i.iter()
-                .map(|s_i_poly| s_i_poly.coefficients.clone())
-                .flatten()
+                .flat_map(|s_i_poly| s_i_poly.coefficients.clone())
                 .collect()
         })
         .collect();
@@ -541,8 +540,8 @@ pub fn prove() {
         for i in 0..size_r.value() {
             let pai = &gaussian_distribution_matrices[i][j];
             let s_i = &s_coeffs[i];
-            let inner_product = inner_product_zq_vector(&pai, &s_i);
-            sum = sum + inner_product;
+            let inner_product = inner_product_zq_vector(pai, s_i);
+            sum += inner_product;
         }
         p.push(sum);
     }
@@ -550,7 +549,7 @@ pub fn prove() {
     assert_eq!(p.len(), double_lambda.value());
 
     // sanity check: verify p_j = ct(sum(<σ−1(pi_i^(j)), s_i>)) for all i = 1..r
-    for j in 0..double_lambda.value() {
+    for (j, &p_j) in p.iter().enumerate() {
         let mut sum = PolynomialRing {
             coefficients: vec![Zq::from(0); deg_bound_d.value()],
         };
@@ -567,7 +566,7 @@ pub fn prove() {
             sum = sum + &pai_poly_ca * s_i_poly;
         }
         println!("sum: {:?}", sum);
-        assert_eq!(sum.coefficients[0], p[j]);
+        assert_eq!(sum.coefficients[0], p_j);
     }
 
     // todo: send p to verifier(put in transcript)
@@ -745,7 +744,7 @@ pub fn prove() {
             .sum();
         // <⟨omega^(k),p⟩>
         let omega_k = &omega_challenge[k];
-        let inner_product_omega_k_p = inner_product_zq_vector(&omega_k, &p);
+        let inner_product_omega_k_p = inner_product_zq_vector(omega_k, &p);
         // add them together
         b_k_0_computed += inner_product_omega_k_p;
         // print k
