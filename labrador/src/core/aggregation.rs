@@ -1,5 +1,5 @@
-use crate::gadgets::{
-    conjugation_automorphism::conjugation_automorphism, constraints::calculate_b_constraint,
+use crate::core::{
+    conjugation_automorphism::conjugation_automorphism, constraint::calculate_b_constraint,
     gaussian_generator::generate_gaussian_distribution,
 };
 use algebra::{

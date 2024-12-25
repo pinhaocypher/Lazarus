@@ -1,11 +1,10 @@
-use crate::gadgets::{
-    aggregation::*, conjugation_automorphism::conjugation_automorphism, constraints::*,
-    decompose::*, gaussian_generator::generate_gaussian_distribution, norm::*,
+use crate::core::{
+    aggregation::*, conjugation_automorphism::conjugation_automorphism, constraint::*,
+    decompose::*, gaussian_generator::generate_gaussian_distribution, norm::*, outer_commitment::*,
 };
 use crate::setup::setup;
 use crate::st::St;
 use crate::tr::Tr;
-use crate::utils::{calculate_outer_comm_u1, calculate_outer_comm_u2};
 use crate::verifier::verify;
 use algebra::{
     polynomial_ring::PolynomialRing,

@@ -1,4 +1,4 @@
-use crate::gadgets::aggregation::*;
+use crate::core::aggregation::*;
 use algebra::{polynomial_ring::PolynomialRing, zq::Zq};
 // convert number to basis
 // 42 = 0 * 2^7 + 1 * 2^6 + 0 * 2^5 + 1 * 2^4 + 0 * 2^3 + 1 * 2^2 + 0 * 2^1 + 0 * 2^0
