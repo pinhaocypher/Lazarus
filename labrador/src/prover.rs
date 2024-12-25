@@ -5,8 +5,8 @@ use rand::Rng;
 
 // inner product of 2 vectors of PolynomialRing
 fn inner_product_polynomial_ring_vector(
-    a: &Vec<PolynomialRing>,
-    b: &Vec<PolynomialRing>,
+    a: &[PolynomialRing],
+    b: &[PolynomialRing],
 ) -> PolynomialRing {
     a.iter()
         .zip(b.iter())
@@ -17,15 +17,15 @@ fn inner_product_polynomial_ring_vector(
         .unwrap()
 }
 
-fn inner_product_zq_vector(a: &Vec<Zq>, b: &Vec<Zq>) -> Zq {
+fn inner_product_zq_vector(a: &[Zq], b: &[Zq]) -> Zq {
     a.iter().zip(b.iter()).map(|(a, b)| *a * *b).sum()
 }
 
 // Function to calculate b^(k)
 fn calculate_b_constraint(
-    s: &Vec<Vec<PolynomialRing>>,
-    a_constraint: &Vec<Vec<PolynomialRing>>,
-    phi_constraint: &Vec<Vec<PolynomialRing>>,
+    s: &[Vec<PolynomialRing>],
+    a_constraint: &[Vec<PolynomialRing>],
+    phi_constraint: &[Vec<PolynomialRing>],
 ) -> PolynomialRing {
     let mut b: PolynomialRing = PolynomialRing {
         coefficients: vec![Zq::from(0)],
@@ -39,7 +39,7 @@ fn calculate_b_constraint(
             let elem_s_i = &s[i];
             let elem_s_j = &s[j];
             // Calculate inner product and update b
-            let inner_product_si_sj = inner_product_polynomial_ring_vector(&elem_s_i, &elem_s_j);
+            let inner_product_si_sj = inner_product_polynomial_ring_vector(elem_s_i, elem_s_j);
             let a_constr = &a_constraint[i][j];
             b = b + (inner_product_si_sj * a_constr);
         }
@@ -53,7 +53,7 @@ fn calculate_b_constraint(
 }
 
 // calculate matrix times vector of PolynomialRing
-fn matrix_times_vector_poly(a: &RqMatrix, s_i: &Vec<PolynomialRing>) -> Vec<PolynomialRing> {
+fn matrix_times_vector_poly(a: &RqMatrix, s_i: &[PolynomialRing]) -> Vec<PolynomialRing> {
     a.values
         .iter()
         .map(|row| {
@@ -82,8 +82,7 @@ fn num_to_basis(num: Zq, basis: Zq, digits: Zq) -> Vec<Zq> {
     let mut remainder = num;
 
     let zero = Zq::from(0);
-    let one = Zq::from(1);
-    let mut base = basis;
+    let base = basis;
 
     for _ in 0..digits.value() {
         let digit = remainder.clone() % base.clone();
@@ -91,7 +90,7 @@ fn num_to_basis(num: Zq, basis: Zq, digits: Zq) -> Vec<Zq> {
         remainder = remainder.clone() / base.clone();
     }
 
-    while result.len() < digits.value() as usize {
+    while result.len() < digits.value() {
         // push 0 to the highest position
         result.push(zero.clone());
     }
@@ -108,7 +107,7 @@ fn ring_polynomial_to_basis(poly: &PolynomialRing, basis: Zq, digits: Zq) -> Vec
 }
 
 fn generate_gaussian_distribution(nd: Zq) -> Vec<Vec<Zq>> {
-    let nd_usize: usize = nd.value() as usize;
+    let nd_usize: usize = nd.value();
     let modulus: usize = Zq::modulus();
     let mut rng = rand::thread_rng();
     let mut matrix = vec![vec![Zq::from(0); nd_usize]; 256]; // Initialize a 256 x nd matrix
@@ -169,7 +168,7 @@ fn generate_random_polynomial_ring(deg_bound_d: usize) -> PolynomialRing {
 }
 
 fn decompose_poly_to_basis_form(
-    poly: &Vec<Vec<PolynomialRing>>,
+    poly: &[Vec<PolynomialRing>],
     basis: Zq,
     digits: Zq,
 ) -> Vec<Vec<Vec<PolynomialRing>>> {
@@ -388,8 +387,6 @@ pub fn prove() {
 
     // 2.2.1 get basis b2 same as 2.1.1
     // Calculate g_ij = <s_i, s_j>
-    let num_s = Zq::new(witness_s.len());
-
     // Calculate garbage polynomial g_ij = <s_i, s_j>
     let g_gar_poly: Vec<Vec<PolynomialRing>> = (0..size_r.value())
         .map(|i| {
@@ -826,8 +823,8 @@ pub fn prove() {
                     let phi_j = &phi_aggr[j];
                     let s_i = &witness_s[i];
                     let s_j = &witness_s[j];
-                    let inner_product_ij = inner_product_polynomial_ring_vector(&phi_i, &s_j)
-                        + inner_product_polynomial_ring_vector(&phi_j, &s_i);
+                    let inner_product_ij = inner_product_polynomial_ring_vector(phi_i, s_j)
+                        + inner_product_polynomial_ring_vector(phi_j, s_i);
                     inner_product_ij / Zq::from(2)
                 })
                 .collect::<Vec<PolynomialRing>>()
