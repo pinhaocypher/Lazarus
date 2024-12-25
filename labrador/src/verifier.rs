@@ -16,9 +16,9 @@ pub fn verify(
     st: St,
     tr: Tr,
     a_matrix: &RqMatrix,
-    b_matrix: &Vec<Vec<RqMatrix>>,
-    c_matrix: &Vec<Vec<Vec<RqMatrix>>>,
-    d_matrix: &Vec<Vec<Vec<RqMatrix>>>,
+    b_matrix: &[Vec<RqMatrix>],
+    c_matrix: &[Vec<Vec<RqMatrix>>],
+    d_matrix: &[Vec<Vec<RqMatrix>>],
 ) {
     // same parameters as in the prover
     let size_r = Zq::new(3); // r: Number of witness elements

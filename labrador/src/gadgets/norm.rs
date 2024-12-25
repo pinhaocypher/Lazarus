@@ -8,21 +8,21 @@ pub fn poly_norm_squared(poly: &PolynomialRing) -> Zq {
 }
 
 // Calculate the sum of squared norms for a vector of PolynomialRing instances.
-pub fn poly_vec_norm_squared(polys: &Vec<PolynomialRing>) -> Zq {
+pub fn poly_vec_norm_squared(polys: &[PolynomialRing]) -> Zq {
     polys
         .iter()
         .fold(Zq::new(0), |acc, poly| acc + poly_norm_squared(poly))
 }
 
 // Calculate the sum of squared norms for a matrix of PolynomialRing instances.
-pub fn poly_matrix_norm_squared(poly_matrix: &Vec<Vec<PolynomialRing>>) -> Zq {
+pub fn poly_matrix_norm_squared(poly_matrix: &[Vec<PolynomialRing>]) -> Zq {
     poly_matrix.iter().fold(Zq::new(0), |acc, vector| {
         acc + poly_vec_norm_squared(vector)
     })
 }
 
 // Calculate the sum of squared norms for a 3D vector of PolynomialRing instances.
-pub fn poly_3d_norm_squared(polymat3d: &Vec<Vec<Vec<PolynomialRing>>>) -> Zq {
+pub fn poly_3d_norm_squared(polymat3d: &[Vec<Vec<PolynomialRing>>]) -> Zq {
     polymat3d.iter().fold(Zq::new(0), |acc, poly_matrix| {
         acc + poly_matrix_norm_squared(poly_matrix)
     })

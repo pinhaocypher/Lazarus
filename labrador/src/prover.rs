@@ -23,9 +23,9 @@ use rand::Rng;
 #[time_profiler()]
 pub fn prove(
     a_matrix: &RqMatrix,
-    b_matrix: &Vec<Vec<RqMatrix>>,
-    c_matrix: &Vec<Vec<Vec<RqMatrix>>>,
-    d_matrix: &Vec<Vec<Vec<RqMatrix>>>,
+    b_matrix: &[Vec<RqMatrix>],
+    c_matrix: &[Vec<Vec<RqMatrix>>],
+    d_matrix: &[Vec<Vec<RqMatrix>>],
 ) -> (St, Tr) {
     // s is a vector of size r. each s_i is a PolynomialRing<Zq> with n coefficients
     let size_r = Zq::new(3); // r: Number of witness elements
@@ -200,7 +200,7 @@ pub fn prove(
     // 2.3 calculate u1
     let u1 = calculate_outer_comm_u1(
         b_matrix,
-        &c_matrix,
+        c_matrix,
         &g_matrix_aggregated,
         &all_t_i_basis_form_aggregated,
         kappa1,
@@ -247,8 +247,7 @@ pub fn prove(
         .iter()
         .map(|s_i| {
             s_i.iter()
-                .map(|s_i_poly| s_i_poly.coefficients.clone())
-                .flatten()
+                .flat_map(|s_i_poly| s_i_poly.coefficients.clone())
                 .collect()
         })
         .collect();
@@ -261,8 +260,8 @@ pub fn prove(
         for i in 0..size_r.value() {
             let pai_element = &pai[i][j];
             let s_i = &s_coeffs[i];
-            let inner_product = inner_product_zq_vector(&pai_element, &s_i);
-            sum = sum + inner_product;
+            let inner_product = inner_product_zq_vector(pai_element, s_i);
+            sum += inner_product;
         }
         p.push(sum);
     }
@@ -270,7 +269,7 @@ pub fn prove(
     assert_eq!(p.len(), double_lambda.value());
 
     // sanity check: verify p_j = ct(sum(<σ−1(pi_i^(j)), s_i>)) for all i = 1..r
-    for j in 0..double_lambda.value() {
+    for (j, &p_j) in p.iter().enumerate() {
         let mut sum = PolynomialRing {
             coefficients: vec![Zq::from(0); deg_bound_d.value()],
         };
@@ -286,7 +285,7 @@ pub fn prove(
             };
             sum = sum + &pai_poly_ca * s_i_poly;
         }
-        assert_eq!(sum.coefficients[0], p[j]);
+        assert_eq!(sum.coefficients[0], p_j);
     }
     println!("Prover: Send proof p");
 
@@ -577,9 +576,8 @@ mod tests {
                         let phi_j = &phi_aggr[j];
                         let s_i = &witness_s[i];
                         let s_j = &witness_s[j];
-                        let inner_product_ij = inner_product_polynomial_ring_vector(phi_i, s_j)
-                            + inner_product_polynomial_ring_vector(phi_j, s_i);
-                        inner_product_ij
+                        inner_product_polynomial_ring_vector(phi_i, s_j)
+                            + inner_product_polynomial_ring_vector(phi_j, s_i)
                     })
                     .collect::<Vec<PolynomialRing>>()
             })

@@ -163,11 +163,11 @@ pub fn compute_aggr_ct_constraint_b(
 
 // aggregation: a_i = sum(alpha_k * a_ij) + sum(beta_k * a_ij^{''(k)})
 pub fn compute_aggr_constraint_a(
-    a_constraint: &Vec<Vec<Vec<PolynomialRing>>>,
-    a_ct_aggr: &Vec<Vec<Vec<PolynomialRing>>>,
+    a_constraint: &[Vec<Vec<PolynomialRing>>],
+    a_ct_aggr: &[Vec<Vec<PolynomialRing>>],
     constraint_num_k: Zq,
-    alpha: &Vec<PolynomialRing>,
-    beta: &Vec<PolynomialRing>,
+    alpha: &[PolynomialRing],
+    beta: &[PolynomialRing],
     size_r: Zq,
     size_k: Zq,
 ) -> Vec<Vec<PolynomialRing>> {
@@ -260,8 +260,8 @@ pub fn compute_aggr_constraint_b(
     b_constraint: &Vec<PolynomialRing>,
     b_ct_aggr: &Vec<PolynomialRing>,
     constraint_num_k: Zq,
-    alpha: &Vec<PolynomialRing>,
-    beta: &Vec<PolynomialRing>,
+    alpha: &[PolynomialRing],
+    beta: &[PolynomialRing],
     size_k: Zq,
 ) -> PolynomialRing {
     // Part 1: sum(alpha_k * b^(k))
@@ -279,10 +279,10 @@ pub fn compute_aggr_constraint_b(
 }
 
 pub fn check_aggr_relation(
-    a_aggr: &Vec<Vec<PolynomialRing>>,
+    a_aggr: &[Vec<PolynomialRing>],
     b_aggr: &PolynomialRing,
-    g: &Vec<Vec<PolynomialRing>>,
-    h: &Vec<Vec<PolynomialRing>>,
+    g: &[Vec<PolynomialRing>],
+    h: &[Vec<PolynomialRing>],
 ) {
     let size_r = Zq::from(a_aggr.len());
     // 7. check if sum(a_ij * g_ij) + sum(h_ii) -b ?= 0
@@ -505,7 +505,7 @@ mod tests {
                     .map(|j| {
                         let s_i = &witness_s[i];
                         let s_j = &witness_s[j];
-                        inner_product_polynomial_ring_vector(&s_i, &s_j)
+                        inner_product_polynomial_ring_vector(s_i, s_j)
                     })
                     .collect::<Vec<PolynomialRing>>()
             })
@@ -587,9 +587,8 @@ mod tests {
                         let phi_j = &phi_aggr[j];
                         let s_i = &witness_s[i];
                         let s_j = &witness_s[j];
-                        let inner_product_ij = inner_product_polynomial_ring_vector(phi_i, s_j)
-                            + inner_product_polynomial_ring_vector(phi_j, s_i);
-                        inner_product_ij
+                        inner_product_polynomial_ring_vector(phi_i, s_j)
+                            + inner_product_polynomial_ring_vector(phi_j, s_i)
                     })
                     .collect::<Vec<PolynomialRing>>()
             })

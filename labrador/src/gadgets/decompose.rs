@@ -39,7 +39,7 @@ pub fn ring_polynomial_to_basis(poly: &PolynomialRing, basis: Zq, digits: Zq) ->
 }
 
 pub fn poly_vec_decompose_to_basis(
-    poly: &Vec<PolynomialRing>,
+    poly: &[PolynomialRing],
     basis: Zq,
     digits: Zq,
 ) -> Vec<Vec<Vec<Zq>>> {
