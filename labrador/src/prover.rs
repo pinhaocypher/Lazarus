@@ -2,8 +2,8 @@ use crate::core::{
     aggregation::*, conjugation_automorphism::conjugation_automorphism, constraint::*,
     decompose::*, gaussian_generator::generate_gaussian_distribution, norm::*, outer_commitment::*,
 };
-use crate::st::St;
-use crate::tr::Tr;
+use crate::statement::Statement;
+use crate::transcript::Transcript;
 use algebra::{
     polynomial_ring::PolynomialRing,
     rq_matrix::RqMatrix,
@@ -23,7 +23,7 @@ pub fn prove(
     b_matrix: &[Vec<RqMatrix>],
     c_matrix: &[Vec<Vec<RqMatrix>>],
     d_matrix: &[Vec<Vec<RqMatrix>>],
-) -> (St, Tr) {
+) -> (Statement, Transcript) {
     // s is a vector of size r. each s_i is a PolynomialRing<Zq> with n coefficients
     let size_r = Zq::new(3); // r: Number of witness elements
     let size_n = Zq::new(5); // n
@@ -490,7 +490,7 @@ pub fn prove(
     assert_eq!(sum_phi_i_z_c_i * Zq::from(2), sum_h_ij_c_i_c_j);
     println!("Prover: Send amortized proof");
     println!("Prover is finished");
-    let st = St {
+    let st = Statement {
         a_constraint,
         phi_constraint,
         b_constraint,
@@ -498,7 +498,7 @@ pub fn prove(
         phi_constraint_ct,
         b_constraint_ct,
     };
-    let tr = Tr {
+    let tr = Transcript {
         u1,
         pai,
         p,

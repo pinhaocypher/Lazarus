@@ -1,5 +1,5 @@
 use algebra::{polynomial_ring::PolynomialRing, zq::Zq};
-pub struct Tr {
+pub struct Transcript {
     pub u1: Vec<PolynomialRing>,        // Replace with the actual type
     pub pai: Vec<Vec<Vec<Zq>>>,         // Replace with the actual type
     pub p: Vec<Zq>,                     // Replace with the actual type

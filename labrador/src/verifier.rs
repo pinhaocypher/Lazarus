@@ -1,7 +1,7 @@
 // src/verifier.rs
 use crate::core::{aggregation::*, decompose::*, norm::*, outer_commitment::*};
-use crate::st::St;
-use crate::tr::Tr;
+use crate::statement::Statement;
+use crate::transcript::Transcript;
 use algebra::{polynomial_ring::PolynomialRing, rq_matrix::RqMatrix, utils::*, zq::Zq};
 use profiler_macro::time_profiler;
 
@@ -13,8 +13,8 @@ use profiler_macro::time_profiler;
 
 #[time_profiler]
 pub fn verify(
-    st: St,
-    tr: Tr,
+    st: Statement,
+    tr: Transcript,
     a_matrix: &RqMatrix,
     b_matrix: &[Vec<RqMatrix>],
     c_matrix: &[Vec<Vec<RqMatrix>>],
@@ -36,7 +36,7 @@ pub fn verify(
     let deg_bound_d = Zq::new(8); // random polynomial degree bound
     let new_beta = Zq::new(250); // Example value for beta
 
-    let St {
+    let Statement {
         a_constraint,
         phi_constraint,
         b_constraint,
@@ -45,7 +45,7 @@ pub fn verify(
         b_constraint_ct: _,
     } = st;
 
-    let Tr {
+    let Transcript {
         u1,
         pai,
         p: _,

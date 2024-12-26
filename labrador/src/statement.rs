@@ -1,6 +1,6 @@
 use algebra::{polynomial_ring::PolynomialRing, zq::Zq};
-// statement
-pub struct St {
+
+pub struct Statement {
     pub a_constraint: Vec<Vec<Vec<PolynomialRing>>>,
     pub phi_constraint: Vec<Vec<Vec<PolynomialRing>>>,
     pub b_constraint: Vec<PolynomialRing>,
