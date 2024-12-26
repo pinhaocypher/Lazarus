@@ -7,6 +7,8 @@ use algebra::{PolynomialRing, RqMatrix, Zq};
 // B_ik * t_i^(k): Rq^{kappa1}
 // First summation: ∑ B_ik * t_i^(k), 1 ≤ i ≤ r, 0 ≤ k ≤ t1−1
 // Initialize u1 with zeros with size kappa1, each element is a polynomial ring
+// TODO(junochiu): to check if it make sense to solve the too many argument issue
+#[allow(clippy::too_many_arguments)]
 pub fn calculate_outer_comm_u1(
     b_matrix: &[Vec<RqMatrix>],
     c_matrix: &[Vec<Vec<RqMatrix>>],

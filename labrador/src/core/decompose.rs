@@ -1,4 +1,3 @@
-use crate::core::aggregation::*;
 use algebra::{polynomial_ring::PolynomialRing, zq::Zq};
 // convert number to basis
 // 42 = 0 * 2^7 + 1 * 2^6 + 0 * 2^5 + 1 * 2^4 + 0 * 2^3 + 1 * 2^2 + 0 * 2^1 + 0 * 2^0
@@ -49,7 +48,7 @@ pub fn poly_vec_decompose_to_basis(
 }
 
 pub fn poly_matrix_decompose_to_basis(
-    poly: &Vec<Vec<PolynomialRing>>,
+    poly: &[Vec<PolynomialRing>],
     basis: Zq,
     digits: Zq,
 ) -> Vec<Vec<Vec<Vec<Zq>>>> {
@@ -59,7 +58,9 @@ pub fn poly_matrix_decompose_to_basis(
 }
 
 // TODO(junochiu): check where best to put this function / any renaming needed
+// TODO(junochiu): this function is giving error when applying changes to fix ptr_arg, debug needed
 // aggregate basis form of a vector of PolynomialRing
+#[allow(clippy::ptr_arg)]
 pub fn aggregate_poly_vec_basis_form(
     poly_basis_form: &Vec<Vec<Vec<Zq>>>,
 ) -> Vec<Vec<PolynomialRing>> {
@@ -82,7 +83,7 @@ pub fn aggregate_poly_vec_basis_form(
 
 // TODO(junochiu): check where best to put this function / any renaming needed
 pub fn poly_matrix_decompose_and_aggregate(
-    poly: &Vec<Vec<PolynomialRing>>,
+    poly: &[Vec<PolynomialRing>],
     basis: Zq,
     digits: Zq,
 ) -> Vec<Vec<Vec<PolynomialRing>>> {
@@ -98,7 +99,7 @@ pub fn poly_matrix_decompose_and_aggregate(
 
 // TODO(junochiu): check where best to put this function / any renaming needed
 pub fn poly_vec_decompose_and_aggregate(
-    poly: &Vec<PolynomialRing>,
+    poly: &[PolynomialRing],
     basis: Zq,
     digits: Zq,
 ) -> Vec<Vec<PolynomialRing>> {

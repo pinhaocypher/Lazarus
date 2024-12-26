@@ -1,4 +1,4 @@
-use algebra::{polynomial_ring::PolynomialRing, utils::inner_product_zq_vector, zq::Zq};
+use algebra::{polynomial_ring::PolynomialRing, zq::Zq};
 
 // Conjugation Automorphism σ_{-1}
 // for polynomial ring a = 1+2x+3x^2, since x^64 = -1, apply this method to a, will get 1+2*(Zq.modulus()-1) * x^(64-1) +3*(Zq.modulus()-1) * x^(64-2)
@@ -32,8 +32,8 @@ pub fn conjugation_automorphism(poly: &PolynomialRing) -> PolynomialRing {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
+    use algebra::utils::inner_product_zq_vector;
     #[test]
     fn test_conjugation_automorphism() {
         // Create example PolynomialRings a and b

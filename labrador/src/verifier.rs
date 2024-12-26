@@ -10,7 +10,8 @@ use profiler_macro::time_profiler;
 // 2. generate from V: [PI_i, psi^(k), omega^(k), vec<alpha>, vec<beta>, c_i]
 // What are sent to the verifier?
 // [u1, p, b^{''(k)},u2, z, t_i, g_ij, h_ij]
-#[time_profiler()]
+
+#[time_profiler]
 pub fn verify(
     st: St,
     tr: Tr,
@@ -20,13 +21,13 @@ pub fn verify(
     d_matrix: &[Vec<Vec<RqMatrix>>],
 ) {
     // same parameters as in the prover
-    let size_r = Zq::new(3); // r: Number of witness elements
+    let _size_r = Zq::new(3); // r: Number of witness elements
     let size_n = Zq::new(5); // n
     let basis = Zq::new(10);
     let digits = Zq::new(3); // t1
     let t1 = digits;
     let t2 = digits;
-    let kappa = Zq::new(3); // Example size
+    let _kappa = Zq::new(3); // Example size
     let kappa1 = Zq::from(5);
     let kappa2 = Zq::from(5);
     let lambda = Zq::new(128);
@@ -41,13 +42,13 @@ pub fn verify(
         b_constraint,
         a_constraint_ct,
         phi_constraint_ct,
-        b_constraint_ct,
+        b_constraint_ct: _,
     } = st;
 
     let Tr {
         u1,
         pai,
-        p,
+        p: _,
         psi,
         omega,
         b_ct_aggr,

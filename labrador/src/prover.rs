@@ -2,10 +2,8 @@ use crate::core::{
     aggregation::*, conjugation_automorphism::conjugation_automorphism, constraint::*,
     decompose::*, gaussian_generator::generate_gaussian_distribution, norm::*, outer_commitment::*,
 };
-use crate::setup::setup;
 use crate::st::St;
 use crate::tr::Tr;
-use crate::verifier::verify;
 use algebra::{
     polynomial_ring::PolynomialRing,
     rq_matrix::RqMatrix,
@@ -19,7 +17,7 @@ use algebra::{
 use profiler_macro::time_profiler;
 use rand::Rng;
 
-#[time_profiler()]
+#[time_profiler]
 pub fn prove(
     a_matrix: &RqMatrix,
     b_matrix: &[Vec<RqMatrix>],
@@ -516,12 +514,14 @@ pub fn prove(
         g,
         h,
     };
-    return (st, tr);
+    (st, tr)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::setup::setup;
+    use crate::verifier::verify;
     use std::vec;
 
     #[test]

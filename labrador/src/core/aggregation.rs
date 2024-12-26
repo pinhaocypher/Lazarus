@@ -1,17 +1,10 @@
-use crate::core::{
-    conjugation_automorphism::conjugation_automorphism, constraint::calculate_b_constraint,
-    gaussian_generator::generate_gaussian_distribution,
-};
-use algebra::{
-    generate_random_polynomial_ring, inner_product_polynomial_ring_vector, zero_poly,
-    PolynomialRing, Zq,
-};
-use rand::Rng;
+use crate::core::conjugation_automorphism::conjugation_automorphism;
+use algebra::{inner_product_polynomial_ring_vector, zero_poly, PolynomialRing, Zq};
 
 // 4.3.1 aggregation: calculate a_ij^{''(k)} = sum(psi_l^(k) * a_ij^{'(l)}) for all l = 1..L
 pub fn compute_aggr_ct_constraint_a(
-    a_constraint_ct: &Vec<Vec<Vec<PolynomialRing>>>,
-    psi: &Vec<Vec<Zq>>,
+    a_constraint_ct: &[Vec<Vec<PolynomialRing>>],
+    psi: &[Vec<Zq>],
     size_k: Zq,
     size_r: Zq,
     constraint_num_l: Zq,
@@ -44,17 +37,19 @@ pub fn compute_aggr_ct_constraint_a(
 // 4.3.2 aggregation: calculate phi_i^{''(k)} =
 //       sum(psi_l^(k) * phi_i^{'(l)}) for all l = 1..L
 //       + sum(omega_j^(k) * sigma_{-1} * pi_i^{j)) for all j = 1..256
+// TODO(junochiu): check if it make sense to solve the too many argument issue
+#[allow(clippy::too_many_arguments)]
 pub fn compute_aggr_ct_constraint_phi(
-    phi_constraint_ct: &Vec<Vec<Vec<PolynomialRing>>>,
-    pai: &Vec<Vec<Vec<Zq>>>,
+    phi_constraint_ct: &[Vec<Vec<PolynomialRing>>],
+    pai: &[Vec<Vec<Zq>>],
     size_k: Zq,
     size_r: Zq,
     constraint_num_l: Zq,
     deg_bound_d: Zq,
     size_n: Zq,
     double_lambda: Zq,
-    psi: &Vec<Vec<Zq>>,
-    omega: &Vec<Vec<Zq>>,
+    psi: &[Vec<Zq>],
+    omega: &[Vec<Zq>],
 ) -> Vec<Vec<Vec<PolynomialRing>>> {
     let phi_ct_aggr: Vec<Vec<Vec<PolynomialRing>>> = (0..size_k.value())
         .map(|k| {
@@ -127,12 +122,12 @@ pub fn compute_aggr_ct_constraint_phi(
 
 // 4.3.3 aggregation: calculate b^{''(k)} = sum(a_ij^{''(k)} * <s_i, s_j>) + sum(<phi_i^{''(k)}, s_i>)
 pub fn compute_aggr_ct_constraint_b(
-    a_ct_aggr: &Vec<Vec<Vec<PolynomialRing>>>,
-    phi_ct_aggr: &Vec<Vec<Vec<PolynomialRing>>>,
+    a_ct_aggr: &[Vec<Vec<PolynomialRing>>],
+    phi_ct_aggr: &[Vec<Vec<PolynomialRing>>],
     size_k: Zq,
     size_r: Zq,
     deg_bound_d: Zq,
-    witness_s: &Vec<Vec<PolynomialRing>>,
+    witness_s: &[Vec<PolynomialRing>],
 ) -> Vec<PolynomialRing> {
     (0..size_k.value())
         .map(|k| {
@@ -194,12 +189,14 @@ pub fn compute_aggr_constraint_a(
 }
 
 // aggregation: phi_i = sum(alpha_k * phi_i) + sum(beta_k * phi_i^{''(k)})
+// TODO(junochiu): check if it make sense to solve the too many argument issue
+#[allow(clippy::too_many_arguments)]
 pub fn compute_aggr_constraint_phi(
-    phi_constraint: &Vec<Vec<Vec<PolynomialRing>>>,
-    phi_ct_aggr: &Vec<Vec<Vec<PolynomialRing>>>,
+    phi_constraint: &[Vec<Vec<PolynomialRing>>],
+    phi_ct_aggr: &[Vec<Vec<PolynomialRing>>],
     constraint_num_k: Zq,
-    alpha: &Vec<PolynomialRing>,
-    beta: &Vec<PolynomialRing>,
+    alpha: &[PolynomialRing],
+    beta: &[PolynomialRing],
     size_r: Zq,
     size_n: Zq,
     deg_bound_d: Zq,
@@ -257,8 +254,8 @@ pub fn compute_aggr_constraint_phi(
 
 // aggregation: b_i = sum(alpha_k * b^(k)) + sum(beta_k * b^{''(k)})
 pub fn compute_aggr_constraint_b(
-    b_constraint: &Vec<PolynomialRing>,
-    b_ct_aggr: &Vec<PolynomialRing>,
+    b_constraint: &[PolynomialRing],
+    b_ct_aggr: &[PolynomialRing],
     constraint_num_k: Zq,
     alpha: &[PolynomialRing],
     beta: &[PolynomialRing],
@@ -312,6 +309,11 @@ pub fn check_aggr_relation(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::{
+        constraint::calculate_b_constraint, gaussian_generator::generate_gaussian_distribution,
+    };
+    use algebra::utils::generate_random_polynomial_ring;
+    use rand::Rng;
     #[test]
     fn test_aggr_relation_full_example() {
         let size_r = Zq::new(3); // r: Number of witness elements
