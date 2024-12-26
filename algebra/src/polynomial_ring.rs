@@ -43,7 +43,6 @@ impl PolynomialRing {
                 front[i] += overflow * modulus_minus_one;
             }
             result_coefficients.truncate(Self::DEGREE_BOUND);
-            result_coefficients.truncate(Self::DEGREE_BOUND);
         }
         PolynomialRing {
             coefficients: result_coefficients,
