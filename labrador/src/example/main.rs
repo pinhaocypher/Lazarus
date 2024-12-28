@@ -4,5 +4,5 @@ use labrador::prover;
 //
 //      cargo run --example main --features profiler
 fn main() {
-    prover::prove();
+    println!("Hello, Lazarus!");
 }
