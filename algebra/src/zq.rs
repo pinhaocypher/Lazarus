@@ -82,7 +82,6 @@ impl Mul for Zq {
     type Output = Zq;
 
     fn mul(self, other: Zq) -> Zq {
-        // assert!(self.value * other.value < Self::Q, "Multiplication result exceeds modulus");
         Zq::new(self.value * other.value)
     }
 }
