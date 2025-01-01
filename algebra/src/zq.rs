@@ -59,7 +59,6 @@ impl Add for Zq {
     type Output = Zq;
 
     fn add(self, other: Zq) -> Zq {
-        // assert!(self.value + other.value < Self::Q, "Addition result exceeds modulus");
         Zq::new(self.value + other.value)
     }
 }
