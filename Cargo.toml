@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "labrador",
+    "algebra"
 ]
 
 [workspace.package]
@@ -10,9 +11,11 @@ edition = "2021"
 
 [workspace.dependencies]
 rand = "0.8"
-rayon = { version = "*"}
+rayon = "1.10.0"
 
 # profiler deps
 ark-std = { version = "0.4.0" }
 profiler_macro = { git ="https://github.com/SuccinctPaul/profiler-rs.git", tag = "v0.1.0" }
 
+[workspace.features]
+profiler = ["ark-std/print-trace"]

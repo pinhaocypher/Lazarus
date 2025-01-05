@@ -1,5 +1,7 @@
-use crate::algebra::RqMatrix;
-use crate::algebra::Zq;
+use algebra::{rq_matrix::RqMatrix, zq::Zq};
+
+type RqMatrix2D = Vec<Vec<RqMatrix>>;
+type RqMatrix3D = Vec<Vec<Vec<RqMatrix>>>;
 
 fn setup_matrices(
     size_n: Zq,
@@ -9,12 +11,7 @@ fn setup_matrices(
     kappa: Zq,
     kappa1: Zq,
     kappa2: Zq,
-) -> (
-    RqMatrix,
-    Vec<Vec<RqMatrix>>,
-    Vec<Vec<Vec<RqMatrix>>>,
-    Vec<Vec<Vec<RqMatrix>>>,
-) {
+) -> (RqMatrix, RqMatrix2D, RqMatrix3D, RqMatrix3D) {
     // Initialize matrix A
     let a_matrix = RqMatrix::new(kappa, size_n);
 
@@ -64,8 +61,8 @@ pub fn setup(
     kappa: Zq,
     kappa1: Zq,
     kappa2: Zq,
-) -> (RqMatrix, Vec<Vec<RqMatrix>>, Vec<Vec<Vec<RqMatrix>>>, Vec<Vec<Vec<RqMatrix>>>) {
-  setup_matrices(kappa, size_n, size_r, t1, t2, kappa1, kappa2)
+) -> (RqMatrix, RqMatrix2D, RqMatrix3D, RqMatrix3D) {
+    setup_matrices(size_n, size_r, t1, t2, kappa, kappa1, kappa2)
     // 0. setup
     // public parameters after setup: [a_ij^(k), a_ij^(l), phi^(k), phi^(l), b^(k), b0(l)']
 
